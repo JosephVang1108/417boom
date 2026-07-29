@@ -137,7 +137,7 @@ Build the app around what already works:
    - Manual paste / share-to-app
    - Chrome extension “Send to SpeedLead” (user-initiated while browsing FB)
    - Webhook intake (for VA tools or partners)
-5. **Matcher** — keyword rules first; LLM scoring second (reduce junk)
+5. **Matcher** — keyword rules first; **TextRazor** semantics second (hire vs complaint)
 
 ### Phase 3 — Scale & differentiate
 
@@ -187,7 +187,7 @@ Build the app around what already works:
       Post Normalizer
             │
             ▼
-     Matcher (keywords → LLM score)
+     Matcher (keywords → TextRazor hire-vs-complaint)
             │
             ▼
       Lead Service (Postgres)
