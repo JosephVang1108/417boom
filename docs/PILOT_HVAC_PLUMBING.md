@@ -131,6 +131,17 @@ Onboarding question list:
 
 ---
 
+### Matcher (TextRazor)
+
+Before an SMS fires, posts pass through `matcher.classify_post`:
+
+- **Alert:** hire / recommend / emergency service request  
+- **Skip:** complaints, “never use X”, job postings, DIY questions  
+
+See [TEXTRAZOR_MATCHER.md](./TEXTRAZOR_MATCHER.md). This is the difference between “need a plumber” and “complaining about a plumber.”
+
+---
+
 ## Concierge operating loop (daily)
 
 ```text
