@@ -29,6 +29,17 @@ Tap **Capture → Try hire request → Classify post**.
 - [Product brief](docs/PRODUCT_BRIEF.md)
 - [HVAC + Plumbing pilot](docs/PILOT_HVAC_PLUMBING.md)
 - [TextRazor matcher](docs/TEXTRAZOR_MATCHER.md)
+- [SMS for many clients](docs/SMS_MULTI_TENANT.md) — **one Twilio number covers all clients**
+
+## Client experience
+
+Three tabs only:
+
+1. **Jobs** — new leads with a ready reply  
+2. **Paste** — paste a Facebook post, tap “Check this post”  
+3. **Me** — name, business, phones  
+
+Built for a busy HVAC/plumbing owner with zero tech skills.
 
 ## Tests
 

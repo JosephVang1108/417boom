@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1420" />
+  <meta name="theme-color" content="#e8451a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="format-detection" content="telephone=no" />
   <title>SpeedLead</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -19,111 +18,99 @@
     <header class="app-header">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true"></span>
-        <div>
-          <strong>SpeedLead</strong>
-          <small id="healthMeta">Starting…</small>
-        </div>
+        <strong>SpeedLead</strong>
       </div>
-      <button type="button" class="icon-btn" id="refreshBtn" aria-label="Refresh">↻</button>
     </header>
 
-    <div class="banner" id="modeBanner" hidden></div>
-
     <main class="main">
-      <header class="view-head">
-        <h1 id="viewTitle">Inbox</h1>
-        <p id="viewSubtitle">Hire requests only — complaints stay quiet.</p>
-      </header>
-
-      <section class="view is-active" id="view-inbox" data-panel="inbox">
-        <div class="filters">
-          <label class="check">
-            <input type="checkbox" id="alertsOnly" checked />
-            Alerts only
-          </label>
-          <span id="inboxCount" class="muted"></span>
+      <!-- HOME: new jobs -->
+      <section class="view is-active" id="view-home" data-panel="home">
+        <div class="hero-copy">
+          <h1>New jobs</h1>
+          <p>When someone needs help, it shows up here with your reply ready.</p>
         </div>
-        <div class="lead-list" id="leadList"></div>
+        <div id="leadList" class="lead-list"></div>
       </section>
 
-      <section class="view" id="view-intake" data-panel="intake">
-        <div class="demo-row">
-          <button type="button" class="chip" data-demo="hire">Try hire request</button>
-          <button type="button" class="chip" data-demo="complaint">Try complaint</button>
+      <!-- PASTE A POST -->
+      <section class="view" id="view-paste" data-panel="paste">
+        <div class="hero-copy">
+          <h1>Paste a post</h1>
+          <p>Copy a Facebook post, paste it below, and we’ll tell you if it’s a real job.</p>
         </div>
-        <form class="capture-form" id="captureForm">
+
+        <div class="demo-row">
+          <button type="button" class="chip" data-demo="hire">See a real job example</button>
+          <button type="button" class="chip" data-demo="complaint">See a complaint example</button>
+        </div>
+
+        <form id="captureForm" class="simple-form">
           <label>
-            <span>Facebook group</span>
-            <input name="group_name" placeholder="Springfield Moms" autocomplete="off" />
+            <span>Which group? <em>(optional)</em></span>
+            <input name="group_name" placeholder="ex: Springfield Moms" autocomplete="off" />
           </label>
           <label>
-            <span>Post link (optional)</span>
-            <input name="post_url" type="url" inputmode="url" placeholder="https://facebook.com/…" autocomplete="off" />
-          </label>
-          <label>
-            <span>Post text</span>
-            <textarea name="text" rows="6" required placeholder="Paste the Facebook post here…"></textarea>
-          </label>
-          <label class="check">
-            <input type="checkbox" name="send_sms" id="sendSms" />
-            Also text me if it’s a hire request
+            <span>The post</span>
+            <textarea name="text" rows="7" required placeholder="Paste the Facebook post here"></textarea>
           </label>
           <p class="form-status" id="captureStatus" role="status"></p>
-          <aside class="result-panel" id="resultPanel" hidden></aside>
-          <div class="sticky-cta">
-            <button class="btn btn-primary btn-block" type="submit">Classify post</button>
-          </div>
+          <button class="btn btn-primary btn-block" type="submit">Check this post</button>
         </form>
+
+        <div id="resultCard" class="result-card" hidden></div>
       </section>
 
-      <section class="view" id="view-settings" data-panel="settings">
-        <form class="settings-form" id="settingsForm">
+      <!-- MY INFO -->
+      <section class="view" id="view-me" data-panel="me">
+        <div class="hero-copy">
+          <h1>My info</h1>
+          <p>We use this to build your reply and text you when a job pops up.</p>
+        </div>
+
+        <form id="settingsForm" class="simple-form">
+          <label>
+            <span>Your first name</span>
+            <input name="owner_name" required autocomplete="given-name" placeholder="Mike" />
+          </label>
           <label>
             <span>Business name</span>
-            <input name="name" required autocomplete="organization" />
+            <input name="name" required autocomplete="organization" placeholder="Ozark Comfort Pros" />
           </label>
           <label>
-            <span>Your name</span>
-            <input name="owner_name" required autocomplete="name" />
+            <span>Phone customers should call</span>
+            <input name="phone" type="tel" inputmode="tel" required autocomplete="tel" placeholder="(417) 555-0199" />
           </label>
           <label>
-            <span>Business phone (in replies)</span>
-            <input name="phone" type="tel" inputmode="tel" required autocomplete="tel" />
+            <span>Your cell (get job alerts here)</span>
+            <input name="alert_phone" type="tel" inputmode="tel" required autocomplete="tel" placeholder="(417) 555-0199" />
           </label>
           <label>
-            <span>Alert SMS phone</span>
-            <input name="alert_phone" type="tel" inputmode="tel" required autocomplete="tel" />
+            <span>City you serve</span>
+            <input name="city" required autocomplete="address-level2" placeholder="Springfield" />
           </label>
-          <label>
-            <span>City</span>
-            <input name="city" required autocomplete="address-level2" />
-          </label>
-          <label>
-            <span>Trades</span>
-            <input name="trades" placeholder="hvac,plumbing" />
-          </label>
-          <button class="btn btn-primary btn-block" type="submit">Save settings</button>
+          <input type="hidden" name="trades" value="hvac,plumbing" />
+          <button class="btn btn-primary btn-block" type="submit">Save</button>
           <p class="form-status" id="settingsStatus" role="status"></p>
         </form>
-        <div class="templates" id="templatesBox"></div>
       </section>
     </main>
 
     <nav class="tab-bar" aria-label="Primary">
-      <button type="button" class="tab-btn is-active" data-view="inbox">
-        <span class="tab-icon" aria-hidden="true">◈</span>
-        <span>Inbox</span>
+      <button type="button" class="tab-btn is-active" data-view="home">
+        <span class="tab-icon" aria-hidden="true">●</span>
+        <span>Jobs</span>
       </button>
-      <button type="button" class="tab-btn tab-btn-primary" data-view="intake" id="gotoCaptureBtn">
+      <button type="button" class="tab-btn tab-btn-primary" data-view="paste">
         <span class="tab-icon tab-icon-plus" aria-hidden="true">＋</span>
-        <span>Capture</span>
+        <span>Paste</span>
       </button>
-      <button type="button" class="tab-btn" data-view="settings">
-        <span class="tab-icon" aria-hidden="true">☰</span>
-        <span>Settings</span>
+      <button type="button" class="tab-btn" data-view="me">
+        <span class="tab-icon" aria-hidden="true">☺</span>
+        <span>Me</span>
       </button>
     </nav>
   </div>
+
   <script src="matcher.js"></script>
   <script src="app.js"></script>
 </body>

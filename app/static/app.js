@@ -1,4 +1,4 @@
-const STORAGE_KEY = "speedlead_local_v1";
+const STORAGE_KEY = "speedlead_simple_v1";
 
 const demos = {
   hire: {
@@ -15,8 +15,8 @@ const defaultBusiness = {
   id: 1,
   name: "Ozark Comfort Pros",
   owner_name: "Mike",
-  phone: "+14175550199",
-  alert_phone: "+14175550199",
+  phone: "(417) 555-0199",
+  alert_phone: "(417) 555-0199",
   city: "Springfield",
   trades: "hvac,plumbing",
 };
@@ -25,21 +25,19 @@ const defaultTemplates = [
   {
     id: 1,
     trade: "plumbing",
-    name: "Plumbing — fast",
     is_default: true,
     body: "Hi! I’m {name} with {business}. We can help with that — licensed & insured, serving the {city} area. Call/text {phone} and we’ll get you on the schedule ASAP.",
   },
   {
     id: 2,
     trade: "hvac",
-    name: "HVAC — down system",
     is_default: true,
     body: "Hey! {name} here with {business}. If your system is down, we can usually diagnose fast. Call/text {phone} — tell us the issue and your zip and we’ll help ASAP.",
   },
 ];
 
 const state = {
-  view: "inbox",
+  view: "home",
   leads: [],
   business: { ...defaultBusiness },
   templates: [...defaultTemplates],
@@ -49,33 +47,11 @@ const state = {
 
 const els = {
   leadList: document.getElementById("leadList"),
-  inboxCount: document.getElementById("inboxCount"),
-  alertsOnly: document.getElementById("alertsOnly"),
   captureForm: document.getElementById("captureForm"),
   captureStatus: document.getElementById("captureStatus"),
-  resultPanel: document.getElementById("resultPanel"),
+  resultCard: document.getElementById("resultCard"),
   settingsForm: document.getElementById("settingsForm"),
   settingsStatus: document.getElementById("settingsStatus"),
-  templatesBox: document.getElementById("templatesBox"),
-  healthMeta: document.getElementById("healthMeta"),
-  viewTitle: document.getElementById("viewTitle"),
-  viewSubtitle: document.getElementById("viewSubtitle"),
-  modeBanner: document.getElementById("modeBanner"),
-};
-
-const viewCopy = {
-  inbox: {
-    title: "Inbox",
-    subtitle: "Hire requests only — complaints stay quiet.",
-  },
-  intake: {
-    title: "Capture",
-    subtitle: "Paste a Facebook post. We alert only if they’re hiring.",
-  },
-  settings: {
-    title: "Settings",
-    subtitle: "Your reply details and alert phone.",
-  },
 };
 
 function loadLocal() {
@@ -88,7 +64,7 @@ function loadLocal() {
     state.templates = parsed.templates || state.templates;
     state.nextId = parsed.nextId || state.nextId;
   } catch {
-    /* ignore corrupt storage */
+    /* ignore */
   }
 }
 
@@ -104,30 +80,12 @@ function saveLocal() {
   );
 }
 
-function setOffline(offline, detail = "") {
-  state.offline = offline;
-  if (!els.modeBanner) return;
-  if (offline) {
-    els.modeBanner.hidden = false;
-    els.modeBanner.textContent =
-      detail ||
-      "Running in local demo mode (no API). Classification still works — tap Capture and try a sample.";
-  } else {
-    els.modeBanner.hidden = true;
-    els.modeBanner.textContent = "";
-  }
-}
-
 async function api(path, options = {}) {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
   });
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || res.statusText);
-  }
-  if (res.status === 204) return null;
+  if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
@@ -139,8 +97,6 @@ function setView(view) {
   document.querySelectorAll(".view").forEach((panel) => {
     panel.classList.toggle("is-active", panel.dataset.panel === view);
   });
-  els.viewTitle.textContent = viewCopy[view].title;
-  els.viewSubtitle.textContent = viewCopy[view].subtitle;
   const main = document.querySelector(".main");
   if (main) main.scrollTop = 0;
 }
@@ -153,14 +109,6 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-function formatTime(iso) {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-}
-
 function renderTemplate(body, business) {
   return body
     .replaceAll("{name}", business.owner_name || "")
@@ -171,115 +119,109 @@ function renderTemplate(body, business) {
 }
 
 function pickTemplate(trade) {
-  const exact = state.templates.find((t) => t.trade === trade && t.is_default);
-  if (exact) return exact;
-  return state.templates.find((t) => t.trade === trade) || state.templates[0];
+  return (
+    state.templates.find((t) => t.trade === trade && t.is_default) ||
+    state.templates.find((t) => t.trade === trade) ||
+    state.templates[0]
+  );
+}
+
+function jobLeads() {
+  return state.leads.filter((lead) => lead.should_alert && lead.status !== "done");
 }
 
 function renderLeads() {
-  const alertsOnly = els.alertsOnly.checked;
-  const leads = alertsOnly ? state.leads.filter((l) => l.should_alert) : state.leads;
-  els.inboxCount.textContent = `${leads.length} shown`;
+  const leads = jobLeads();
   if (!leads.length) {
-    els.leadList.innerHTML = `<div class="empty">No leads yet.<br />Tap <strong>Capture</strong>, then try a sample hire request.</div>`;
+    els.leadList.innerHTML = `
+      <div class="empty">
+        <h2>No new jobs yet</h2>
+        <p>When someone asks for a plumber or HVAC tech, it’ll show up here with your reply ready to copy.</p>
+        <button type="button" class="btn btn-primary" id="emptyPasteBtn">Paste a Facebook post</button>
+      </div>`;
+    document.getElementById("emptyPasteBtn")?.addEventListener("click", () => setView("paste"));
     return;
   }
 
   els.leadList.innerHTML = leads
     .map((lead) => {
-      const badgeClass = lead.should_alert ? "badge-alert" : "badge-skip";
-      const badgeText = lead.should_alert ? "Alert" : "Skipped";
-      const reply = lead.reply_text
-        ? `<div class="reply-box">
-            <strong>Prefill reply</strong>
-            <code>${escapeHtml(lead.reply_text)}</code>
-            <div class="lead-actions">
-              <button type="button" class="btn btn-ghost" data-copy-lead="${lead.id}">Copy reply</button>
-              <button type="button" class="btn btn-ghost" data-status="${lead.id}" data-value="replied">Replied</button>
-              ${lead.post_url ? `<a class="btn btn-ghost btn-span" href="${escapeHtml(lead.post_url)}" target="_blank" rel="noopener">Open Facebook post</a>` : ""}
-              <button type="button" class="btn btn-primary btn-span" data-status="${lead.id}" data-value="won">Mark won</button>
-            </div>
-          </div>`
-        : `<div class="meta-row"><span>Reason: ${escapeHtml((lead.reasons || []).join("; "))}</span></div>`;
-
-      return `<article class="lead">
-        <div class="lead-head">
-          <h3>${escapeHtml(lead.group_name || "Manual capture")} · ${escapeHtml(lead.trade || "n/a")}</h3>
-          <span class="badge ${badgeClass}">${badgeText} · ${escapeHtml(lead.intent)}</span>
+      return `
+      <article class="lead is-job">
+        <span class="lead-label job">New job</span>
+        <h2>${escapeHtml(lead.group_name || "Facebook group")}</h2>
+        <p class="post">${escapeHtml(lead.post_text)}</p>
+        <div class="reply">
+          <strong>Your reply</strong>
+          <p>${escapeHtml(lead.reply_text)}</p>
         </div>
-        <p>${escapeHtml(lead.post_text)}</p>
-        <div class="meta-row">
-          <span>${formatTime(lead.created_at)}</span>
-          <span>confidence ${Math.round((lead.confidence || 0) * 100)}%</span>
-          <span>status ${escapeHtml(lead.status)}</span>
-          <span>sms ${lead.sms_sent ? "sent" : escapeHtml(lead.sms_error || "not sent")}</span>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" data-copy-lead="${lead.id}">Copy my reply</button>
+          <button type="button" class="btn btn-secondary" data-done="${lead.id}">Done — I replied</button>
         </div>
-        ${reply}
       </article>`;
     })
     .join("");
 }
 
-function renderResult(lead) {
-  els.resultPanel.hidden = false;
-  const flag = lead.should_alert ? "ALERT" : "SKIP";
-  els.resultPanel.innerHTML = `
-    <div class="lead-head">
-      <h3>Result · ${flag}</h3>
-      <span class="badge ${lead.should_alert ? "badge-alert" : "badge-skip"}">${escapeHtml(lead.intent)}</span>
-    </div>
-    <div class="meta-row">
-      <span>trade ${escapeHtml(lead.trade || "none")}</span>
-      <span>confidence ${Math.round(lead.confidence * 100)}%</span>
-      <span>sms ${lead.sms_sent ? "sent" : escapeHtml(lead.sms_error || "not sent")}</span>
-    </div>
-    ${
-      lead.reply_text
-        ? `<div class="reply-box"><strong>Prefill reply</strong><code>${escapeHtml(lead.reply_text)}</code></div>`
-        : `<p class="muted">${escapeHtml((lead.reasons || []).join("; "))}</p>`
-    }
-  `;
+function showResult(lead) {
+  els.resultCard.hidden = false;
+  if (lead.should_alert) {
+    els.resultCard.innerHTML = `
+      <span class="lead-label job">This looks like a job</span>
+      <h2>Reply is ready</h2>
+      <p>We saved it under Jobs. Copy your reply and paste it on Facebook.</p>
+      <div class="reply">
+        <strong>Your reply</strong>
+        <p>${escapeHtml(lead.reply_text)}</p>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" data-copy-lead="${lead.id}">Copy my reply</button>
+        <button type="button" class="btn btn-secondary" id="goJobsBtn">Go to Jobs</button>
+      </div>`;
+    document.getElementById("goJobsBtn")?.addEventListener("click", () => setView("home"));
+  } else {
+    const why =
+      lead.intent === "complaint"
+        ? "That’s someone complaining — not asking for help."
+        : lead.intent === "job_posting"
+          ? "That’s a hiring post, not a customer looking for service."
+          : "We couldn’t tell this was a customer looking for help.";
+    els.resultCard.innerHTML = `
+      <span class="lead-label skip">Not a job</span>
+      <h2>No alert needed</h2>
+      <p>${why}</p>
+      <button type="button" class="btn btn-secondary btn-block" id="tryAnotherBtn">Try another post</button>`;
+    document.getElementById("tryAnotherBtn")?.addEventListener("click", () => {
+      els.resultCard.hidden = true;
+      els.captureForm.text.value = "";
+      els.captureStatus.textContent = "";
+    });
+  }
 }
 
-function fillBusinessForm() {
+function fillSettings() {
   const form = els.settingsForm;
-  form.name.value = state.business.name || "";
   form.owner_name.value = state.business.owner_name || "";
+  form.name.value = state.business.name || "";
   form.phone.value = state.business.phone || "";
   form.alert_phone.value = state.business.alert_phone || "";
   form.city.value = state.business.city || "";
-  form.trades.value = state.business.trades || "";
 }
 
-function renderTemplates() {
-  els.templatesBox.innerHTML =
-    `<h3 style="margin:0 0 .4rem;font-family:var(--font-display)">Reply templates</h3>` +
-    state.templates
-      .map((t) => `<article class="template-item"><h4>${escapeHtml(t.name)}</h4><p>${escapeHtml(t.body)}</p></article>`)
-      .join("");
-}
-
-function localIngest({ text, group_name, post_url }) {
+function localIngest({ text, group_name }) {
   const result = window.SpeedLeadMatcher.classify(text);
   const template = pickTemplate(result.trade);
-  const reply = result.should_alert && template ? renderTemplate(template.body, state.business) : "";
+  const reply =
+    result.should_alert && template ? renderTemplate(template.body, state.business) : "";
   const lead = {
     id: state.nextId++,
-    business_id: state.business.id,
-    source: "manual",
     group_name: group_name || "",
     post_text: text,
-    post_url: post_url || "",
     intent: result.intent,
     trade: result.trade,
-    confidence: result.confidence,
     should_alert: result.should_alert,
-    matched_keywords: result.matched_keywords,
-    reasons: result.reasons.concat(["mode:local"]),
     reply_text: reply,
-    status: result.should_alert ? "alerted" : "skipped",
-    sms_sent: false,
-    sms_error: "local_mode",
+    status: result.should_alert ? "new" : "skipped",
     created_at: new Date().toISOString(),
   };
   state.leads.unshift(lead);
@@ -293,58 +235,36 @@ async function loadLeads() {
     return;
   }
   try {
-    const alertsOnly = els.alertsOnly.checked;
-    state.leads = await api(`/api/leads?alerts_only=false`);
-    // keep full list locally for toggles; filter in render
-    if (alertsOnly) {
-      /* filtered in renderLeads */
-    }
+    const leads = await api("/api/leads?alerts_only=false");
+    state.leads = leads.map((lead) => ({
+      ...lead,
+      status: lead.status === "won" || lead.status === "replied" || lead.status === "ignored" ? "done" : lead.status,
+    }));
     renderLeads();
-  } catch (err) {
-    setOffline(true, `API unavailable (${err.message}). Using local demo mode.`);
+  } catch {
+    state.offline = true;
     loadLocal();
     renderLeads();
   }
 }
 
 async function loadBusiness() {
-  if (state.offline) {
-    fillBusinessForm();
-    return;
+  if (!state.offline) {
+    try {
+      state.business = await api("/api/business");
+    } catch {
+      state.offline = true;
+    }
   }
-  try {
-    state.business = await api("/api/business");
-    fillBusinessForm();
-  } catch {
-    fillBusinessForm();
-  }
+  fillSettings();
 }
 
 async function loadTemplates() {
-  if (state.offline) {
-    renderTemplates();
-    return;
-  }
+  if (state.offline) return;
   try {
     state.templates = await api("/api/templates");
-    renderTemplates();
   } catch {
-    renderTemplates();
-  }
-}
-
-async function loadHealth() {
-  try {
-    const health = await api("/api/health");
-    setOffline(false);
-    els.healthMeta.innerHTML = `
-      API: online<br />
-      TextRazor: ${health.textrazor ? "on" : "heuristic"}<br />
-      Twilio: ${health.twilio ? "on" : "off"}
-    `;
-  } catch {
-    setOffline(true);
-    els.healthMeta.innerHTML = `API: offline<br />Local matcher: on`;
+    /* keep defaults */
   }
 }
 
@@ -352,32 +272,27 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => setView(btn.dataset.view));
 });
 
-document.getElementById("refreshBtn").addEventListener("click", () => {
-  loadHealth().then(loadLeads);
-});
-els.alertsOnly.addEventListener("change", () => renderLeads());
-
 document.querySelectorAll("[data-demo]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const demo = demos[btn.getAttribute("data-demo")];
     if (!demo) return;
     els.captureForm.group_name.value = demo.group_name;
     els.captureForm.text.value = demo.text;
-    els.captureStatus.textContent = "Sample loaded — tap Classify post.";
+    els.captureStatus.textContent = "Example loaded — tap Check this post.";
     els.captureStatus.classList.remove("is-error");
+    els.resultCard.hidden = true;
   });
 });
 
 els.captureForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  els.captureStatus.textContent = "Classifying…";
+  els.captureStatus.textContent = "Checking…";
   els.captureStatus.classList.remove("is-error");
   const data = new FormData(els.captureForm);
   const payload = {
     text: String(data.get("text") || ""),
     group_name: String(data.get("group_name") || ""),
-    post_url: String(data.get("post_url") || ""),
-    send_sms: Boolean(data.get("send_sms")),
+    send_sms: false,
     source: "manual",
   };
 
@@ -389,43 +304,38 @@ els.captureForm.addEventListener("submit", async (event) => {
       lead = await api("/api/ingest", { method: "POST", body: JSON.stringify(payload) });
       await loadLeads();
     }
-    els.captureStatus.textContent = lead.should_alert ? "Lead alerted." : "Skipped (not hire intent).";
-    renderResult(lead);
+    els.captureStatus.textContent = lead.should_alert ? "Job found." : "Not a job.";
+    showResult(lead);
     renderLeads();
-    setView("inbox");
   } catch (err) {
-    // fall back to local if API fails mid-flight
-    setOffline(true, `API error — switched to local mode. (${err.message})`);
+    state.offline = true;
     const lead = localIngest(payload);
-    els.captureStatus.textContent = lead.should_alert ? "Lead alerted (local)." : "Skipped (local).";
-    renderResult(lead);
+    els.captureStatus.textContent = lead.should_alert ? "Job found." : "Not a job.";
+    showResult(lead);
     renderLeads();
-    setView("inbox");
   }
 });
 
 els.settingsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  els.settingsStatus.classList.remove("is-error");
-  const data = new FormData(els.settingsForm);
-  const payload = Object.fromEntries(data.entries());
+  const data = Object.fromEntries(new FormData(els.settingsForm).entries());
   try {
     if (state.offline) {
-      state.business = { ...state.business, ...payload };
+      state.business = { ...state.business, ...data };
       saveLocal();
-      els.settingsStatus.textContent = "Saved locally.";
     } else {
       state.business = await api("/api/business", {
         method: "PATCH",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(data),
       });
-      els.settingsStatus.textContent = "Saved.";
     }
-  } catch (err) {
-    state.business = { ...state.business, ...payload };
+    els.settingsStatus.textContent = "Saved.";
+    els.settingsStatus.classList.remove("is-error");
+  } catch {
+    state.business = { ...state.business, ...data };
     saveLocal();
-    setOffline(true);
-    els.settingsStatus.textContent = "Saved locally (API offline).";
+    state.offline = true;
+    els.settingsStatus.textContent = "Saved on this phone.";
   }
 });
 
@@ -436,47 +346,61 @@ els.leadList.addEventListener("click", async (event) => {
     const lead = state.leads.find((item) => item.id === id);
     if (lead?.reply_text) {
       await navigator.clipboard.writeText(lead.reply_text);
-      copyBtn.textContent = "Copied";
+      copyBtn.textContent = "Copied!";
       setTimeout(() => {
-        copyBtn.textContent = "Copy reply";
+        copyBtn.textContent = "Copy my reply";
       }, 1200);
     }
     return;
   }
 
-  const statusBtn = event.target.closest("[data-status]");
-  if (statusBtn) {
-    const id = Number(statusBtn.getAttribute("data-status"));
-    const status = statusBtn.getAttribute("data-value");
-    if (state.offline) {
-      const lead = state.leads.find((item) => item.id === id);
-      if (lead) lead.status = status;
-      saveLocal();
-      renderLeads();
-      return;
+  const doneBtn = event.target.closest("[data-done]");
+  if (doneBtn) {
+    const id = Number(doneBtn.getAttribute("data-done"));
+    const lead = state.leads.find((item) => item.id === id);
+    if (!lead) return;
+    lead.status = "done";
+    saveLocal();
+    if (!state.offline) {
+      try {
+        await api(`/api/leads/${id}/status`, {
+          method: "POST",
+          body: JSON.stringify({ status: "replied" }),
+        });
+      } catch {
+        /* local is enough */
+      }
     }
-    try {
-      await api(`/api/leads/${id}/status`, {
-        method: "POST",
-        body: JSON.stringify({ status }),
-      });
-      await loadLeads();
-    } catch (err) {
-      els.healthMeta.textContent = `Status update failed: ${err.message}`;
-    }
+    renderLeads();
+  }
+});
+
+document.getElementById("resultCard").addEventListener("click", async (event) => {
+  const copyBtn = event.target.closest("[data-copy-lead]");
+  if (!copyBtn) return;
+  const id = Number(copyBtn.getAttribute("data-copy-lead"));
+  const lead = state.leads.find((item) => item.id === id);
+  if (lead?.reply_text) {
+    await navigator.clipboard.writeText(lead.reply_text);
+    copyBtn.textContent = "Copied!";
+    setTimeout(() => {
+      copyBtn.textContent = "Copy my reply";
+    }, 1200);
   }
 });
 
 async function boot() {
-  setView("inbox");
   loadLocal();
-  await loadHealth();
-  await Promise.all([loadBusiness(), loadTemplates(), loadLeads()]);
+  setView("home");
+  try {
+    await api("/api/health");
+    state.offline = false;
+  } catch {
+    state.offline = true;
+  }
+  await loadBusiness();
+  await loadTemplates();
+  await loadLeads();
 }
 
-boot().catch((err) => {
-  setOffline(true, `Startup error — local mode. ${err.message}`);
-  fillBusinessForm();
-  renderTemplates();
-  renderLeads();
-});
+boot();
