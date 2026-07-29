@@ -210,7 +210,7 @@ Build the app around what already works:
 - Auth: Clerk or Supabase Auth
 - SMS: Twilio
 - Queue: Inngest or BullMQ
-- Matcher: rules + OpenAI/Anthropic for intent scoring
+- Matcher: rules + **TextRazor** (entities/relations/custom classifier) for hire vs complaint
 - Hosting: Vercel + worker
 
 Keep Facebook out of the critical path until Meta offers a real group content API again (unlikely soon).
