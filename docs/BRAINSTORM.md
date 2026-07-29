@@ -21,13 +21,22 @@ So the product should be sold as **speed-to-lead**, not as “Facebook integrati
 2. Alerting (SMS/push fast)
 3. Reply assist (prefilled, on-brand, one tap)
 
+## Decisions
+
+| Question | Decision |
+|---|---|
+| First vertical | **HVAC + Plumbing** (two keyword packs, one product) |
+| Market | 417 — Springfield / Nixa / surrounding |
+| First delivery mode | Concierge pilot (manual watch → SMS → reply templates) |
+
+See [PILOT_HVAC_PLUMBING.md](./PILOT_HVAC_PLUMBING.md) for keywords, templates, offer, and 14-day checklist.
+
 ## Best first move
 
-Sell a **concierge pilot** to 3 businesses in one trade in the 417 market. Manually watch their groups. Text SMS when a match hits. Track whether they win jobs. If they renew, build the dashboard.
+Sell a **concierge pilot** to 3–6 HVAC/plumbing shops in the 417 market. Manually watch their groups. Text SMS when a match hits. Track whether they win jobs. If they renew, build the dashboard.
 
-## Open questions for Joseph
+## Still open
 
-- First vertical: plumbing, HVAC, roofing, legal, realty, or other?
-- Do you want this white-labeled under 417BOOM or as a separate brand?
-- Are you willing to staff a VA for the first 10 customers?
-- Target price you’d feel good quoting tomorrow on a sales call?
+- Brand: separate name vs 417BOOM white-label?
+- Who monitors during pilot (you / VA / both)?
+- Pilot price to quote (suggested **$99/mo**)?

@@ -27,7 +27,9 @@ Speed is the product. Everything else is packaging.
 | Trades / specialty | Towing, auto glass, tree service | Time-sensitive demand |
 | Agencies (you) | 417BOOM white-label | Resell as a monthly retainable add-on |
 
-**Ideal first customer:** one trade in the 417 area (e.g. HVAC or plumbing) already active in 3–8 local groups.
+**First vertical (locked):** HVAC + Plumbing in the 417 market.  
+**Ideal first customer:** local HVAC or plumbing shop already active in 3–8 Facebook groups.  
+**Pilot detail:** [PILOT_HVAC_PLUMBING.md](./PILOT_HVAC_PLUMBING.md)
 
 ---
 
@@ -93,7 +95,7 @@ That does **not** kill the idea. It changes the **ingestion layer**. The alert +
 
 ### Phase 0 — Validate before you build (1–2 weekends)
 
-Talk to 10 local owners in one trade:
+Talk to 10 local **HVAC and plumbing** owners:
 
 1. Which groups do you check?
 2. How often do you miss jobs because someone else replied first?
@@ -101,6 +103,8 @@ Talk to 10 local owners in one trade:
 4. Who on your team should get the alert?
 
 **Success signal:** ≥5 say “I’d pay for that” and name specific groups + keywords.
+
+Use the locked playbook: [PILOT_HVAC_PLUMBING.md](./PILOT_HVAC_PLUMBING.md).
 
 ### Phase 1 — Concierge MVP (sell before software)
 
