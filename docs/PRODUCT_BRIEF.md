@@ -254,13 +254,13 @@ Add overage SMS at cost + margin.
 
 ---
 
-## Decision checklist (pick these next)
+## Decision checklist
 
 1. **Name** — SpeedLead vs BoomAlert vs something 417-branded  
-2. **First vertical** — one trade only for pilots  
+2. **First vertical** — ✅ HVAC + Plumbing  
 3. **Ingestion for pilots** — concierge VA (recommended) vs Chrome share-sheet  
-4. **Price point** to quote in sales conversations  
-5. **Build vs sell-first** — recommend sell-first with concierge for 2–4 weeks  
+4. **Price point** — suggested $99/mo pilot  
+5. **Build vs sell-first** — ✅ sell-first concierge for 2–4 weeks  
 
 ---
 
