@@ -87,7 +87,8 @@ That does **not** kill the idea. It changes the **ingestion layer**. The alert +
 | **D. Third-party group watchers** | Buy feed from services that monitor groups → webhook into your app | Dependency + ToS gray area | Possible later |
 | **E. Scrape Facebook at scale** | Bots / headless browsers logged into accounts | High ban + legal risk | **Avoid as your core** |
 
-**Recommendation:** Do **not** market “Connect Facebook OAuth and we scrape groups.” Market **“Be first on local group leads”** and ship ingestion as a modular adapter.
+**Recommendation:** Do **not** market “Connect Facebook OAuth.”  
+For hands-off automation, use a **monitoring partner webhook** into SpeedLead (software cost, not VA labor). See [HANDS_OFF_MONITORING.md](./HANDS_OFF_MONITORING.md).
 
 ---
 

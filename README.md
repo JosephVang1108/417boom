@@ -27,11 +27,13 @@ Tap **Capture → Try hire request → Classify post**.
 ## Docs
 
 - [Product brief](docs/PRODUCT_BRIEF.md)
-- [How Facebook connection works](docs/FACEBOOK_CONNECTION.md) — **no official Groups API; here’s the real plan**
+- [How Facebook connection works](docs/FACEBOOK_CONNECTION.md)
+- [Hands-off monitoring (no VA)](docs/HANDS_OFF_MONITORING.md) — **recommended automation path**
+- [Monitor webhook setup](docs/MONITOR_WEBHOOK_SETUP.md)
 - [HVAC + Plumbing pilot](docs/PILOT_HVAC_PLUMBING.md)
 - [TextRazor matcher](docs/TEXTRAZOR_MATCHER.md)
 - [SMS for many clients](docs/SMS_MULTI_TENANT.md)
-- [Chrome extension](extension/README.md) — one-click send from Facebook
+- [Chrome extension](extension/README.md)
 
 ## Client experience
 

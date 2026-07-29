@@ -38,5 +38,5 @@ Sell a **concierge pilot** to 3–6 HVAC/plumbing shops in the 417 market. Manua
 ## Still open
 
 - Brand: separate name vs 417BOOM white-label?
-- Who monitors during pilot (you / VA / both)?
-- Pilot price to quote (suggested **$99/mo**)?
+- Monitoring partner for hands-off intake (recommended over VA)?
+- Pilot price to quote (suggested **$99–$149/mo**)?
