@@ -23,20 +23,18 @@
     </header>
 
     <main class="main">
-      <!-- HOME: new jobs -->
       <section class="view is-active" id="view-home" data-panel="home">
         <div class="hero-copy">
           <h1>New jobs</h1>
-          <p>When someone needs help, it shows up here with your reply ready.</p>
+          <p>When someone needs help, open Facebook and reply like yourself.</p>
         </div>
         <div id="leadList" class="lead-list"></div>
       </section>
 
-      <!-- PASTE A POST -->
       <section class="view" id="view-paste" data-panel="paste">
         <div class="hero-copy">
           <h1>Paste a post</h1>
-          <p>Copy a Facebook post, paste it below, and we’ll tell you if it’s a real job.</p>
+          <p>Paste the Facebook post. If it’s a real job, you can jump straight into the thread.</p>
         </div>
 
         <div class="demo-row">
@@ -46,7 +44,11 @@
 
         <form id="captureForm" class="simple-form">
           <label>
-            <span>Which group? <em>(optional)</em></span>
+            <span>Facebook post link</span>
+            <input name="post_url" type="url" inputmode="url" placeholder="Paste the post link from Facebook" autocomplete="off" />
+          </label>
+          <label>
+            <span>Group name <em>(optional)</em></span>
             <input name="group_name" placeholder="ex: Springfield Moms" autocomplete="off" />
           </label>
           <label>
@@ -60,11 +62,10 @@
         <div id="resultCard" class="result-card" hidden></div>
       </section>
 
-      <!-- MY INFO -->
       <section class="view" id="view-me" data-panel="me">
         <div class="hero-copy">
           <h1>My info</h1>
-          <p>We use this to build your reply and text you when a job pops up.</p>
+          <p>Used only if you want a suggested reply. Keep it sounding like you.</p>
         </div>
 
         <form id="settingsForm" class="simple-form">
@@ -77,11 +78,11 @@
             <input name="name" required autocomplete="organization" placeholder="Ozark Comfort Pros" />
           </label>
           <label>
-            <span>Phone customers should call</span>
+            <span>Your phone (how locals write it)</span>
             <input name="phone" type="tel" inputmode="tel" required autocomplete="tel" placeholder="(417) 555-0199" />
           </label>
           <label>
-            <span>Your cell (get job alerts here)</span>
+            <span>Cell for job alerts</span>
             <input name="alert_phone" type="tel" inputmode="tel" required autocomplete="tel" placeholder="(417) 555-0199" />
           </label>
           <label>

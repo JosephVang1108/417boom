@@ -51,6 +51,11 @@ def test_ingest_hire_request(client):
     assert data["intent"] == "hire_request"
     assert data["trade"] == "plumbing"
     assert "Ozark Comfort Pros" in data["reply_text"] or "Mike" in data["reply_text"]
+    assert "—" not in data["reply_text"]
+    assert "+1" not in data["reply_text"]
+    assert not data["reply_text"].startswith("+")
+    # local-looking phone, no country code prefix in the reply
+    assert "(417)" in data["reply_text"] or "417" in data["reply_text"]
 
 
 def test_ingest_complaint_skipped(client):

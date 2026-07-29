@@ -1,12 +1,14 @@
-const STORAGE_KEY = "speedlead_simple_v1";
+const STORAGE_KEY = "speedlead_simple_v2";
 
 const demos = {
   hire: {
     group_name: "Nixa Neighbors",
+    post_url: "https://www.facebook.com/groups/",
     text: "Anyone know a good plumber in Nixa? Toilet overflowing ASAP.",
   },
   complaint: {
     group_name: "Springfield Moms",
+    post_url: "https://www.facebook.com/groups/",
     text: "Stay away from Joe's Plumbing. Worst plumber ever, complete scam and nightmare.",
   },
 };
@@ -26,13 +28,13 @@ const defaultTemplates = [
     id: 1,
     trade: "plumbing",
     is_default: true,
-    body: "Hi! I’m {name} with {business}. We can help with that — licensed & insured, serving the {city} area. Call/text {phone} and we’ll get you on the schedule ASAP.",
+    body: "Hey, this is {name} with {business} here in {city}. I can help. Text me at {phone} if you want.",
   },
   {
     id: 2,
     trade: "hvac",
     is_default: true,
-    body: "Hey! {name} here with {business}. If your system is down, we can usually diagnose fast. Call/text {phone} — tell us the issue and your zip and we’ll help ASAP.",
+    body: "Hey, {name} here with {business}. We work around {city}. Text me at {phone} and I can take a look.",
   },
 ];
 
@@ -53,6 +55,15 @@ const els = {
   settingsForm: document.getElementById("settingsForm"),
   settingsStatus: document.getElementById("settingsStatus"),
 };
+
+function formatLocalPhone(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  const local = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+  if (local.length === 10) {
+    return `(${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}`;
+  }
+  return String(raw || "").trim();
+}
 
 function loadLocal() {
   try {
@@ -113,9 +124,11 @@ function renderTemplate(body, business) {
   return body
     .replaceAll("{name}", business.owner_name || "")
     .replaceAll("{business}", business.name || "")
-    .replaceAll("{phone}", business.phone || "")
+    .replaceAll("{phone}", formatLocalPhone(business.phone || ""))
     .replaceAll("{city}", business.city || "")
-    .replaceAll("{offer}", "");
+    .replaceAll("{offer}", "")
+    .replaceAll("—", "-")
+    .replaceAll("–", "-");
 }
 
 function pickTemplate(trade) {
@@ -130,13 +143,40 @@ function jobLeads() {
   return state.leads.filter((lead) => lead.should_alert && lead.status !== "done");
 }
 
+function facebookUrl(lead) {
+  return lead.post_url || "https://www.facebook.com/";
+}
+
+function actionButtons(lead) {
+  const hasLink = Boolean(lead.post_url);
+  return `
+    <div class="actions">
+      <a class="btn btn-primary btn-block" href="${escapeHtml(facebookUrl(lead))}" target="_blank" rel="noopener">
+        Reply on Facebook
+      </a>
+      ${
+        hasLink
+          ? ""
+          : `<p class="hint">Tip: paste the Facebook post link next time so this opens the exact thread.</p>`
+      }
+      <details class="suggest">
+        <summary>Optional: use a suggested reply</summary>
+        <div class="reply">
+          <p>${escapeHtml(lead.reply_text)}</p>
+        </div>
+        <button type="button" class="btn btn-secondary btn-block" data-copy-lead="${lead.id}">Copy suggested reply</button>
+      </details>
+      <button type="button" class="btn btn-secondary btn-block" data-done="${lead.id}">Done</button>
+    </div>`;
+}
+
 function renderLeads() {
   const leads = jobLeads();
   if (!leads.length) {
     els.leadList.innerHTML = `
       <div class="empty">
         <h2>No new jobs yet</h2>
-        <p>When someone asks for a plumber or HVAC tech, it’ll show up here with your reply ready to copy.</p>
+        <p>Paste a Facebook post when you see one. If it’s a real job, tap Reply on Facebook and write like yourself.</p>
         <button type="button" class="btn btn-primary" id="emptyPasteBtn">Paste a Facebook post</button>
       </div>`;
     document.getElementById("emptyPasteBtn")?.addEventListener("click", () => setView("paste"));
@@ -150,14 +190,7 @@ function renderLeads() {
         <span class="lead-label job">New job</span>
         <h2>${escapeHtml(lead.group_name || "Facebook group")}</h2>
         <p class="post">${escapeHtml(lead.post_text)}</p>
-        <div class="reply">
-          <strong>Your reply</strong>
-          <p>${escapeHtml(lead.reply_text)}</p>
-        </div>
-        <div class="actions">
-          <button type="button" class="btn btn-primary" data-copy-lead="${lead.id}">Copy my reply</button>
-          <button type="button" class="btn btn-secondary" data-done="${lead.id}">Done — I replied</button>
-        </div>
+        ${actionButtons(lead)}
       </article>`;
     })
     .join("");
@@ -167,33 +200,28 @@ function showResult(lead) {
   els.resultCard.hidden = false;
   if (lead.should_alert) {
     els.resultCard.innerHTML = `
-      <span class="lead-label job">This looks like a job</span>
-      <h2>Reply is ready</h2>
-      <p>We saved it under Jobs. Copy your reply and paste it on Facebook.</p>
-      <div class="reply">
-        <strong>Your reply</strong>
-        <p>${escapeHtml(lead.reply_text)}</p>
-      </div>
-      <div class="actions">
-        <button type="button" class="btn btn-primary" data-copy-lead="${lead.id}">Copy my reply</button>
-        <button type="button" class="btn btn-secondary" id="goJobsBtn">Go to Jobs</button>
-      </div>`;
+      <span class="lead-label job">Looks like a job</span>
+      <h2>Jump into the thread</h2>
+      <p>Reply in your own words. People can tell when it’s copy-paste spam.</p>
+      ${actionButtons(lead)}
+      <button type="button" class="btn btn-secondary btn-block" id="goJobsBtn">Back to Jobs</button>`;
     document.getElementById("goJobsBtn")?.addEventListener("click", () => setView("home"));
   } else {
     const why =
       lead.intent === "complaint"
-        ? "That’s someone complaining — not asking for help."
+        ? "That’s someone complaining, not asking for help."
         : lead.intent === "job_posting"
           ? "That’s a hiring post, not a customer looking for service."
-          : "We couldn’t tell this was a customer looking for help.";
+          : "Doesn’t look like a customer looking for help.";
     els.resultCard.innerHTML = `
       <span class="lead-label skip">Not a job</span>
-      <h2>No alert needed</h2>
+      <h2>Skip this one</h2>
       <p>${why}</p>
       <button type="button" class="btn btn-secondary btn-block" id="tryAnotherBtn">Try another post</button>`;
     document.getElementById("tryAnotherBtn")?.addEventListener("click", () => {
       els.resultCard.hidden = true;
       els.captureForm.text.value = "";
+      els.captureForm.post_url.value = "";
       els.captureStatus.textContent = "";
     });
   }
@@ -203,12 +231,12 @@ function fillSettings() {
   const form = els.settingsForm;
   form.owner_name.value = state.business.owner_name || "";
   form.name.value = state.business.name || "";
-  form.phone.value = state.business.phone || "";
-  form.alert_phone.value = state.business.alert_phone || "";
+  form.phone.value = formatLocalPhone(state.business.phone || "");
+  form.alert_phone.value = formatLocalPhone(state.business.alert_phone || "");
   form.city.value = state.business.city || "";
 }
 
-function localIngest({ text, group_name }) {
+function localIngest({ text, group_name, post_url }) {
   const result = window.SpeedLeadMatcher.classify(text);
   const template = pickTemplate(result.trade);
   const reply =
@@ -216,6 +244,7 @@ function localIngest({ text, group_name }) {
   const lead = {
     id: state.nextId++,
     group_name: group_name || "",
+    post_url: post_url || "",
     post_text: text,
     intent: result.intent,
     trade: result.trade,
@@ -238,7 +267,10 @@ async function loadLeads() {
     const leads = await api("/api/leads?alerts_only=false");
     state.leads = leads.map((lead) => ({
       ...lead,
-      status: lead.status === "won" || lead.status === "replied" || lead.status === "ignored" ? "done" : lead.status,
+      status:
+        lead.status === "won" || lead.status === "replied" || lead.status === "ignored"
+          ? "done"
+          : lead.status,
     }));
     renderLeads();
   } catch {
@@ -251,7 +283,12 @@ async function loadLeads() {
 async function loadBusiness() {
   if (!state.offline) {
     try {
-      state.business = await api("/api/business");
+      const business = await api("/api/business");
+      state.business = {
+        ...business,
+        phone: formatLocalPhone(business.phone),
+        alert_phone: formatLocalPhone(business.alert_phone),
+      };
     } catch {
       state.offline = true;
     }
@@ -277,8 +314,9 @@ document.querySelectorAll("[data-demo]").forEach((btn) => {
     const demo = demos[btn.getAttribute("data-demo")];
     if (!demo) return;
     els.captureForm.group_name.value = demo.group_name;
+    els.captureForm.post_url.value = demo.post_url;
     els.captureForm.text.value = demo.text;
-    els.captureStatus.textContent = "Example loaded — tap Check this post.";
+    els.captureStatus.textContent = "Example loaded. Tap Check this post.";
     els.captureStatus.classList.remove("is-error");
     els.resultCard.hidden = true;
   });
@@ -292,6 +330,7 @@ els.captureForm.addEventListener("submit", async (event) => {
   const payload = {
     text: String(data.get("text") || ""),
     group_name: String(data.get("group_name") || ""),
+    post_url: String(data.get("post_url") || ""),
     send_sms: false,
     source: "manual",
   };
@@ -307,7 +346,7 @@ els.captureForm.addEventListener("submit", async (event) => {
     els.captureStatus.textContent = lead.should_alert ? "Job found." : "Not a job.";
     showResult(lead);
     renderLeads();
-  } catch (err) {
+  } catch {
     state.offline = true;
     const lead = localIngest(payload);
     els.captureStatus.textContent = lead.should_alert ? "Job found." : "Not a job.";
@@ -319,36 +358,45 @@ els.captureForm.addEventListener("submit", async (event) => {
 els.settingsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(els.settingsForm).entries());
+  data.phone = formatLocalPhone(data.phone);
+  data.alert_phone = formatLocalPhone(data.alert_phone);
   try {
     if (state.offline) {
       state.business = { ...state.business, ...data };
       saveLocal();
     } else {
-      state.business = await api("/api/business", {
+      const business = await api("/api/business", {
         method: "PATCH",
         body: JSON.stringify(data),
       });
+      state.business = {
+        ...business,
+        phone: formatLocalPhone(business.phone),
+        alert_phone: formatLocalPhone(business.alert_phone),
+      };
     }
+    fillSettings();
     els.settingsStatus.textContent = "Saved.";
     els.settingsStatus.classList.remove("is-error");
   } catch {
     state.business = { ...state.business, ...data };
     saveLocal();
     state.offline = true;
+    fillSettings();
     els.settingsStatus.textContent = "Saved on this phone.";
   }
 });
 
-els.leadList.addEventListener("click", async (event) => {
+async function handleCopyOrDone(event) {
   const copyBtn = event.target.closest("[data-copy-lead]");
   if (copyBtn) {
     const id = Number(copyBtn.getAttribute("data-copy-lead"));
     const lead = state.leads.find((item) => item.id === id);
     if (lead?.reply_text) {
       await navigator.clipboard.writeText(lead.reply_text);
-      copyBtn.textContent = "Copied!";
+      copyBtn.textContent = "Copied";
       setTimeout(() => {
-        copyBtn.textContent = "Copy my reply";
+        copyBtn.textContent = "Copy suggested reply";
       }, 1200);
     }
     return;
@@ -373,21 +421,10 @@ els.leadList.addEventListener("click", async (event) => {
     }
     renderLeads();
   }
-});
+}
 
-document.getElementById("resultCard").addEventListener("click", async (event) => {
-  const copyBtn = event.target.closest("[data-copy-lead]");
-  if (!copyBtn) return;
-  const id = Number(copyBtn.getAttribute("data-copy-lead"));
-  const lead = state.leads.find((item) => item.id === id);
-  if (lead?.reply_text) {
-    await navigator.clipboard.writeText(lead.reply_text);
-    copyBtn.textContent = "Copied!";
-    setTimeout(() => {
-      copyBtn.textContent = "Copy my reply";
-    }, 1200);
-  }
-});
+els.leadList.addEventListener("click", handleCopyOrDone);
+els.resultCard.addEventListener("click", handleCopyOrDone);
 
 async function boot() {
   loadLocal();

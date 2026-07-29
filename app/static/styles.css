@@ -170,22 +170,53 @@ button, input, textarea {
   white-space: pre-wrap;
 }
 
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
 .reply {
   background: var(--soft);
   border-radius: 14px;
   padding: 0.9rem;
 }
 
-.reply strong {
-  display: block;
-  margin-bottom: 0.4rem;
-  font-size: 0.85rem;
-}
-
 .reply p {
   margin: 0;
   font-size: 0.98rem;
   line-height: 1.4;
+}
+
+.suggest {
+  background: var(--soft);
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+}
+
+.suggest summary {
+  cursor: pointer;
+  font-weight: 750;
+  font-size: 0.95rem;
+  list-style: none;
+}
+
+.suggest summary::-webkit-details-marker {
+  display: none;
+}
+
+.suggest[open] summary {
+  margin-bottom: 0.65rem;
+}
+
+.suggest .reply {
+  background: white;
+  margin-bottom: 0.65rem;
+}
+
+.suggest .btn {
+  margin-top: 0.15rem;
 }
 
 .actions {

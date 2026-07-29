@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # Demo business defaults (editable in Settings UI / DB)
     default_business_name: str = "Ozark Comfort Pros"
     default_owner_name: str = "Mike"
-    default_phone: str = "+14175550199"
+    default_phone: str = "(417) 555-0199"
     default_city: str = "Springfield"
     alert_to_number: str = ""
 

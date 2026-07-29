@@ -80,33 +80,23 @@ Pitch line:
 
 ## Prefilled reply templates
 
-Merge fields: `{name}` `{business}` `{phone}` `{city}` `{offer}`
+Keep these short and human. No em dashes. No +1. Sound like a neighbor.
 
-### Plumbing — fast / friendly
+Merge fields: `{name}` `{business}` `{phone}` `{city}`
 
-```text
-Hi! I’m {name} with {business}. We can help with that — licensed & insured, serving the {city} area. Call/text {phone} and we’ll get you on the schedule ASAP.
-```
-
-### Plumbing — emergency / leak
+### Plumbing
 
 ```text
-Sorry you’re dealing with that. This is {name} at {business} — we handle leak/clog emergencies. Text {phone} and we’ll point you on next steps right away.
+Hey, this is {name} with {business} here in {city}. I can help. Text me at {phone} if you want.
 ```
 
-### HVAC — no AC / no heat
+### HVAC
 
 ```text
-Hey! {name} here with {business}. If your system is down, we can usually diagnose fast. Call/text {phone} — tell us the issue and your zip and we’ll help ASAP.
+Hey, {name} here with {business}. We work around {city}. Text me at {phone} and I can take a look.
 ```
 
-### HVAC — recommend / who do you use
-
-```text
-Hi! I’m {name} with {business} — local HVAC, licensed & insured. Happy to take a look or answer questions. {phone}
-```
-
-Keep replies **short**. Long pitches lose the speed war.
+Better default UX: primary button is **Reply on Facebook** (opens the thread). Suggested reply is optional/hidden so it doesn’t feel automated.
 
 ---
 
