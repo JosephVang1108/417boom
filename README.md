@@ -7,12 +7,14 @@ SaaS MVP: alert HVAC & plumbing shops when a Facebook group post is a **hire req
 ```bash
 pip install -r requirements.txt
 cp .env.example .env
-# optional: add TEXTRAZOR_API_KEY and Twilio credentials
-
-uvicorn app.main:app --reload --port 4170
+./scripts/start.sh
 ```
 
-Open http://localhost:4170
+Open **http://localhost:4170** (or your machine IP on port 4170).
+
+You should land on the SpeedLead inbox. Tap **Capture post → Hire request → Classify**.
+
+If the API isn’t running, open `app/static/index.html` — local demo mode still classifies hire vs complaint.
 
 ## What you can do now
 

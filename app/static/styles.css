@@ -153,8 +153,23 @@ button, input, textarea { font: inherit; color: inherit; }
 
 .btn-ghost:hover { border-color: var(--ink); }
 
-.view { display: none; }
-.view.is-active { display: block; }
+.banner {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: rgba(180, 83, 9, 0.12);
+  color: var(--warn);
+  font-weight: 650;
+  font-size: 0.92rem;
+}
+
+.demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
 
 .filters {
   display: flex;

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -24,10 +24,11 @@
         <button type="button" class="nav-btn" data-view="intake">Capture</button>
         <button type="button" class="nav-btn" data-view="settings">Settings</button>
       </nav>
-      <div class="rail-meta" id="healthMeta">Checking systems…</div>
+      <div class="rail-meta" id="healthMeta">Starting…</div>
     </aside>
 
     <main class="main">
+      <div class="banner" id="modeBanner" hidden></div>
       <header class="topbar">
         <div>
           <h1 id="viewTitle">Lead inbox</h1>
@@ -51,6 +52,11 @@
       </section>
 
       <section class="view" id="view-intake" data-panel="intake">
+        <div class="demo-row">
+          <span class="muted">Try a sample:</span>
+          <button type="button" class="btn btn-ghost" data-demo="hire">Hire request</button>
+          <button type="button" class="btn btn-ghost" data-demo="complaint">Complaint</button>
+        </div>
         <form class="capture-form" id="captureForm">
           <label>
             <span>Facebook group</span>
@@ -65,8 +71,8 @@
             <textarea name="text" rows="7" required placeholder="Paste the Facebook post here…"></textarea>
           </label>
           <label class="check">
-            <input type="checkbox" name="send_sms" id="sendSms" checked />
-            Send SMS if this is a hire request
+            <input type="checkbox" name="send_sms" id="sendSms" />
+            Send SMS if this is a hire request (needs Twilio)
           </label>
           <div class="form-actions">
             <button class="btn btn-primary" type="submit">Classify &amp; ingest</button>
@@ -111,6 +117,7 @@
       </section>
     </main>
   </div>
-  <script src="/static/app.js"></script>
+  <script src="matcher.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

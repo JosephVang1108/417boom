@@ -1,7 +1,50 @@
+const STORAGE_KEY = "speedlead_local_v1";
+
+const demos = {
+  hire: {
+    group_name: "Nixa Neighbors",
+    text: "Anyone know a good plumber in Nixa? Toilet overflowing ASAP.",
+  },
+  complaint: {
+    group_name: "Springfield Moms",
+    text: "Stay away from Joe's Plumbing. Worst plumber ever, complete scam and nightmare.",
+  },
+};
+
+const defaultBusiness = {
+  id: 1,
+  name: "Ozark Comfort Pros",
+  owner_name: "Mike",
+  phone: "+14175550199",
+  alert_phone: "+14175550199",
+  city: "Springfield",
+  trades: "hvac,plumbing",
+};
+
+const defaultTemplates = [
+  {
+    id: 1,
+    trade: "plumbing",
+    name: "Plumbing — fast",
+    is_default: true,
+    body: "Hi! I’m {name} with {business}. We can help with that — licensed & insured, serving the {city} area. Call/text {phone} and we’ll get you on the schedule ASAP.",
+  },
+  {
+    id: 2,
+    trade: "hvac",
+    name: "HVAC — down system",
+    is_default: true,
+    body: "Hey! {name} here with {business}. If your system is down, we can usually diagnose fast. Call/text {phone} — tell us the issue and your zip and we’ll help ASAP.",
+  },
+];
+
 const state = {
   view: "inbox",
   leads: [],
-  business: null,
+  business: { ...defaultBusiness },
+  templates: [...defaultTemplates],
+  offline: false,
+  nextId: 1,
 };
 
 const els = {
@@ -17,6 +60,7 @@ const els = {
   healthMeta: document.getElementById("healthMeta"),
   viewTitle: document.getElementById("viewTitle"),
   viewSubtitle: document.getElementById("viewSubtitle"),
+  modeBanner: document.getElementById("modeBanner"),
 };
 
 const viewCopy = {
@@ -33,6 +77,46 @@ const viewCopy = {
     subtitle: "Reply merge fields and where SMS alerts go.",
   },
 };
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    state.business = parsed.business || state.business;
+    state.leads = parsed.leads || [];
+    state.templates = parsed.templates || state.templates;
+    state.nextId = parsed.nextId || state.nextId;
+  } catch {
+    /* ignore corrupt storage */
+  }
+}
+
+function saveLocal() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      business: state.business,
+      leads: state.leads,
+      templates: state.templates,
+      nextId: state.nextId,
+    })
+  );
+}
+
+function setOffline(offline, detail = "") {
+  state.offline = offline;
+  if (!els.modeBanner) return;
+  if (offline) {
+    els.modeBanner.hidden = false;
+    els.modeBanner.textContent =
+      detail ||
+      "Running in local demo mode (no API). Classification still works — tap Capture and try a sample.";
+  } else {
+    els.modeBanner.hidden = true;
+    els.modeBanner.textContent = "";
+  }
+}
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -75,11 +159,27 @@ function formatTime(iso) {
   }
 }
 
+function renderTemplate(body, business) {
+  return body
+    .replaceAll("{name}", business.owner_name || "")
+    .replaceAll("{business}", business.name || "")
+    .replaceAll("{phone}", business.phone || "")
+    .replaceAll("{city}", business.city || "")
+    .replaceAll("{offer}", "");
+}
+
+function pickTemplate(trade) {
+  const exact = state.templates.find((t) => t.trade === trade && t.is_default);
+  if (exact) return exact;
+  return state.templates.find((t) => t.trade === trade) || state.templates[0];
+}
+
 function renderLeads() {
-  const leads = state.leads;
+  const alertsOnly = els.alertsOnly.checked;
+  const leads = alertsOnly ? state.leads.filter((l) => l.should_alert) : state.leads;
   els.inboxCount.textContent = `${leads.length} shown`;
   if (!leads.length) {
-    els.leadList.innerHTML = `<div class="empty">No leads yet. Capture a Facebook post to test the matcher.</div>`;
+    els.leadList.innerHTML = `<div class="empty">No leads yet. Tap <strong>Capture post</strong>, then try a sample hire request.</div>`;
     return;
   }
 
@@ -139,39 +239,111 @@ function renderResult(lead) {
   `;
 }
 
-async function loadHealth() {
-  const health = await api("/api/health");
-  els.healthMeta.innerHTML = `
-    TextRazor: ${health.textrazor ? "on" : "heuristic"}<br />
-    Twilio: ${health.twilio ? "on" : "off"}
-  `;
+function fillBusinessForm() {
+  const form = els.settingsForm;
+  form.name.value = state.business.name || "";
+  form.owner_name.value = state.business.owner_name || "";
+  form.phone.value = state.business.phone || "";
+  form.alert_phone.value = state.business.alert_phone || "";
+  form.city.value = state.business.city || "";
+  form.trades.value = state.business.trades || "";
+}
+
+function renderTemplates() {
+  els.templatesBox.innerHTML =
+    `<h3 style="margin:0 0 .4rem;font-family:var(--font-display)">Reply templates</h3>` +
+    state.templates
+      .map((t) => `<article class="template-item"><h4>${escapeHtml(t.name)}</h4><p>${escapeHtml(t.body)}</p></article>`)
+      .join("");
+}
+
+function localIngest({ text, group_name, post_url }) {
+  const result = window.SpeedLeadMatcher.classify(text);
+  const template = pickTemplate(result.trade);
+  const reply = result.should_alert && template ? renderTemplate(template.body, state.business) : "";
+  const lead = {
+    id: state.nextId++,
+    business_id: state.business.id,
+    source: "manual",
+    group_name: group_name || "",
+    post_text: text,
+    post_url: post_url || "",
+    intent: result.intent,
+    trade: result.trade,
+    confidence: result.confidence,
+    should_alert: result.should_alert,
+    matched_keywords: result.matched_keywords,
+    reasons: result.reasons.concat(["mode:local"]),
+    reply_text: reply,
+    status: result.should_alert ? "alerted" : "skipped",
+    sms_sent: false,
+    sms_error: "local_mode",
+    created_at: new Date().toISOString(),
+  };
+  state.leads.unshift(lead);
+  saveLocal();
+  return lead;
 }
 
 async function loadLeads() {
-  const alertsOnly = els.alertsOnly.checked;
-  state.leads = await api(`/api/leads?alerts_only=${alertsOnly ? "true" : "false"}`);
-  renderLeads();
+  if (state.offline) {
+    renderLeads();
+    return;
+  }
+  try {
+    const alertsOnly = els.alertsOnly.checked;
+    state.leads = await api(`/api/leads?alerts_only=false`);
+    // keep full list locally for toggles; filter in render
+    if (alertsOnly) {
+      /* filtered in renderLeads */
+    }
+    renderLeads();
+  } catch (err) {
+    setOffline(true, `API unavailable (${err.message}). Using local demo mode.`);
+    loadLocal();
+    renderLeads();
+  }
 }
 
 async function loadBusiness() {
-  state.business = await api("/api/business");
-  const form = els.settingsForm;
-  form.name.value = state.business.name;
-  form.owner_name.value = state.business.owner_name;
-  form.phone.value = state.business.phone;
-  form.alert_phone.value = state.business.alert_phone;
-  form.city.value = state.business.city;
-  form.trades.value = state.business.trades;
+  if (state.offline) {
+    fillBusinessForm();
+    return;
+  }
+  try {
+    state.business = await api("/api/business");
+    fillBusinessForm();
+  } catch {
+    fillBusinessForm();
+  }
 }
 
 async function loadTemplates() {
-  const templates = await api("/api/templates");
-  els.templatesBox.innerHTML = `<h3 style="margin:0 0 .4rem;font-family:var(--font-display)">Reply templates</h3>` +
-    templates
-      .map(
-        (t) => `<article class="template-item"><h4>${escapeHtml(t.name)}</h4><p>${escapeHtml(t.body)}</p></article>`
-      )
-      .join("");
+  if (state.offline) {
+    renderTemplates();
+    return;
+  }
+  try {
+    state.templates = await api("/api/templates");
+    renderTemplates();
+  } catch {
+    renderTemplates();
+  }
+}
+
+async function loadHealth() {
+  try {
+    const health = await api("/api/health");
+    setOffline(false);
+    els.healthMeta.innerHTML = `
+      API: online<br />
+      TextRazor: ${health.textrazor ? "on" : "heuristic"}<br />
+      Twilio: ${health.twilio ? "on" : "off"}
+    `;
+  } catch {
+    setOffline(true);
+    els.healthMeta.innerHTML = `API: offline<br />Local matcher: on`;
+  }
 }
 
 document.querySelectorAll(".nav-btn").forEach((btn) => {
@@ -179,31 +351,55 @@ document.querySelectorAll(".nav-btn").forEach((btn) => {
 });
 
 document.getElementById("gotoCaptureBtn").addEventListener("click", () => setView("intake"));
-document.getElementById("refreshBtn").addEventListener("click", () => loadLeads());
-els.alertsOnly.addEventListener("change", () => loadLeads());
+document.getElementById("refreshBtn").addEventListener("click", () => {
+  loadHealth().then(loadLeads);
+});
+els.alertsOnly.addEventListener("change", () => renderLeads());
+
+document.querySelectorAll("[data-demo]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const demo = demos[btn.getAttribute("data-demo")];
+    if (!demo) return;
+    els.captureForm.group_name.value = demo.group_name;
+    els.captureForm.text.value = demo.text;
+    els.captureStatus.textContent = "Sample loaded — tap Classify & ingest.";
+    els.captureStatus.classList.remove("is-error");
+  });
+});
 
 els.captureForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   els.captureStatus.textContent = "Classifying…";
   els.captureStatus.classList.remove("is-error");
   const data = new FormData(els.captureForm);
+  const payload = {
+    text: String(data.get("text") || ""),
+    group_name: String(data.get("group_name") || ""),
+    post_url: String(data.get("post_url") || ""),
+    send_sms: Boolean(data.get("send_sms")),
+    source: "manual",
+  };
+
   try {
-    const lead = await api("/api/ingest", {
-      method: "POST",
-      body: JSON.stringify({
-        text: data.get("text"),
-        group_name: data.get("group_name") || "",
-        post_url: data.get("post_url") || "",
-        send_sms: Boolean(data.get("send_sms")),
-        source: "manual",
-      }),
-    });
+    let lead;
+    if (state.offline) {
+      lead = localIngest(payload);
+    } else {
+      lead = await api("/api/ingest", { method: "POST", body: JSON.stringify(payload) });
+      await loadLeads();
+    }
     els.captureStatus.textContent = lead.should_alert ? "Lead alerted." : "Skipped (not hire intent).";
     renderResult(lead);
-    await loadLeads();
+    renderLeads();
+    setView("inbox");
   } catch (err) {
-    els.captureStatus.textContent = err.message || "Ingest failed";
-    els.captureStatus.classList.add("is-error");
+    // fall back to local if API fails mid-flight
+    setOffline(true, `API error — switched to local mode. (${err.message})`);
+    const lead = localIngest(payload);
+    els.captureStatus.textContent = lead.should_alert ? "Lead alerted (local)." : "Skipped (local).";
+    renderResult(lead);
+    renderLeads();
+    setView("inbox");
   }
 });
 
@@ -211,15 +407,24 @@ els.settingsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   els.settingsStatus.classList.remove("is-error");
   const data = new FormData(els.settingsForm);
+  const payload = Object.fromEntries(data.entries());
   try {
-    state.business = await api("/api/business", {
-      method: "PATCH",
-      body: JSON.stringify(Object.fromEntries(data.entries())),
-    });
-    els.settingsStatus.textContent = "Saved.";
+    if (state.offline) {
+      state.business = { ...state.business, ...payload };
+      saveLocal();
+      els.settingsStatus.textContent = "Saved locally.";
+    } else {
+      state.business = await api("/api/business", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      els.settingsStatus.textContent = "Saved.";
+    }
   } catch (err) {
-    els.settingsStatus.textContent = err.message || "Save failed";
-    els.settingsStatus.classList.add("is-error");
+    state.business = { ...state.business, ...payload };
+    saveLocal();
+    setOffline(true);
+    els.settingsStatus.textContent = "Saved locally (API offline).";
   }
 });
 
@@ -240,21 +445,37 @@ els.leadList.addEventListener("click", async (event) => {
 
   const statusBtn = event.target.closest("[data-status]");
   if (statusBtn) {
-    const id = statusBtn.getAttribute("data-status");
+    const id = Number(statusBtn.getAttribute("data-status"));
     const status = statusBtn.getAttribute("data-value");
-    await api(`/api/leads/${id}/status`, {
-      method: "POST",
-      body: JSON.stringify({ status }),
-    });
-    await loadLeads();
+    if (state.offline) {
+      const lead = state.leads.find((item) => item.id === id);
+      if (lead) lead.status = status;
+      saveLocal();
+      renderLeads();
+      return;
+    }
+    try {
+      await api(`/api/leads/${id}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status }),
+      });
+      await loadLeads();
+    } catch (err) {
+      els.healthMeta.textContent = `Status update failed: ${err.message}`;
+    }
   }
 });
 
 async function boot() {
   setView("inbox");
-  await Promise.all([loadHealth(), loadBusiness(), loadTemplates(), loadLeads()]);
+  loadLocal();
+  await loadHealth();
+  await Promise.all([loadBusiness(), loadTemplates(), loadLeads()]);
 }
 
 boot().catch((err) => {
-  els.healthMeta.textContent = `Startup error: ${err.message}`;
+  setOffline(true, `Startup error — local mode. ${err.message}`);
+  fillBusinessForm();
+  renderTemplates();
+  renderLeads();
 });

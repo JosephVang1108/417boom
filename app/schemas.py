@@ -11,7 +11,7 @@ class IngestRequest(BaseModel):
     post_url: str = ""
     source: str = "manual"
     business_id: int | None = None
-    send_sms: bool = True
+    send_sms: bool = False
 
 
 class LeadOut(BaseModel):

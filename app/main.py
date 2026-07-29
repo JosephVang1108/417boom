@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db import Business, Lead, ReplyTemplate, get_db, init_db
+from app.db import Business, Lead, ReplyTemplate, SessionLocal, get_db, init_db
 from app.schemas import (
     BusinessOut,
     BusinessUpdate,
@@ -21,18 +23,26 @@ from app.seed import pick_template, render_template, seed_if_empty
 from app.sms import send_lead_sms
 from matcher import classify_post
 
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 settings = get_settings()
-app = FastAPI(title=settings.app_name, version="0.1.0")
 
 
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
     init_db()
-    db = next(get_db())
+    db = SessionLocal()
     try:
         seed_if_empty(db)
     finally:
         db.close()
+    yield
+
+
+app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
+
+
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def lead_to_out(lead: Lead) -> LeadOut:
@@ -62,15 +72,18 @@ def health():
     return {
         "ok": True,
         "app": settings.app_name,
-        "textrazor": bool(settings.textrazor_api_key and settings.textrazor_api_key != "your_textrazor_api_key_here"),
-        "twilio": bool(settings.twilio_account_sid and settings.twilio_auth_token and settings.twilio_from_number),
+        "textrazor": bool(
+            settings.textrazor_api_key and settings.textrazor_api_key != "your_textrazor_api_key_here"
+        ),
+        "twilio": bool(
+            settings.twilio_account_sid and settings.twilio_auth_token and settings.twilio_from_number
+        ),
     }
 
 
 @app.get("/api/business", response_model=BusinessOut)
 def get_business(db: Session = Depends(get_db)):
-    business = seed_if_empty(db)
-    return business
+    return seed_if_empty(db)
 
 
 @app.patch("/api/business", response_model=BusinessOut)
@@ -135,6 +148,8 @@ def ingest_post(payload: IngestRequest, db: Session = Depends(get_db)):
         reasons=" | ".join(result.reasons),
         reply_text=reply_text if result.should_alert else "",
         status="alerted" if result.should_alert else "skipped",
+        created_at=utcnow(),
+        updated_at=utcnow(),
     )
 
     if result.should_alert and payload.send_sms:
@@ -165,7 +180,7 @@ def update_lead_status(lead_id: int, payload: StatusUpdate, db: Session = Depend
     if payload.status not in allowed:
         raise HTTPException(status_code=400, detail=f"status must be one of {sorted(allowed)}")
     lead.status = payload.status
-    lead.updated_at = datetime.utcnow()
+    lead.updated_at = utcnow()
     db.commit()
     db.refresh(lead)
     return lead_to_out(lead)
@@ -173,7 +188,7 @@ def update_lead_status(lead_id: int, payload: StatusUpdate, db: Session = Depend
 
 @app.get("/")
 def dashboard():
-    return FileResponse("app/static/index.html")
+    return RedirectResponse(url="/static/index.html", status_code=307)
 
 
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
