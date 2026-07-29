@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     default_phone: str = "(417) 555-0199"
     default_city: str = "Springfield"
     alert_to_number: str = ""
+    webhook_shared_secret: str = "dev-speedlead-hook"
+    default_send_sms_on_hook: bool = True
 
 
 @lru_cache

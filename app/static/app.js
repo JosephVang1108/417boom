@@ -429,6 +429,18 @@ els.resultCard.addEventListener("click", handleCopyOrDone);
 async function boot() {
   loadLocal();
   setView("home");
+
+  // Phone share target: Facebook Share → SpeedLead
+  const params = new URLSearchParams(window.location.search);
+  const sharedText = params.get("text") || params.get("title") || "";
+  const sharedUrl = params.get("url") || "";
+  if (sharedText || sharedUrl) {
+    setView("paste");
+    if (sharedText) els.captureForm.text.value = sharedText;
+    if (sharedUrl) els.captureForm.post_url.value = sharedUrl;
+    els.captureStatus.textContent = "Shared from Facebook. Tap Check this post.";
+  }
+
   try {
     await api("/api/health");
     state.offline = false;

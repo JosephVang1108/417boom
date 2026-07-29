@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from app.db import Business, Lead, ReplyTemplate, SessionLocal, get_db, init_db
 from app.schemas import (
     BusinessOut,
     BusinessUpdate,
+    HookPostRequest,
     IngestRequest,
     LeadOut,
     StatusUpdate,
@@ -67,6 +68,67 @@ def lead_to_out(lead: Lead) -> LeadOut:
     )
 
 
+def resolve_business(db: Session, business_id: int | None) -> Business:
+    business = seed_if_empty(db)
+    if business_id and business_id != business.id:
+        found = db.query(Business).filter(Business.id == business_id).first()
+        if not found:
+            raise HTTPException(status_code=404, detail="Business not found")
+        return found
+    return business
+
+
+def create_lead_from_post(
+    db: Session,
+    *,
+    business: Business,
+    text: str,
+    group_name: str = "",
+    post_url: str = "",
+    source: str = "manual",
+    send_sms: bool = False,
+) -> Lead:
+    result = classify_post(text)
+    template = pick_template(db, business, result.trade)
+    reply_text = render_template(template.body, business) if template else ""
+
+    lead = Lead(
+        business_id=business.id,
+        source=source,
+        group_name=group_name.strip(),
+        post_text=text.strip(),
+        post_url=post_url.strip(),
+        intent=result.intent.value,
+        trade=result.trade,
+        confidence=result.confidence,
+        should_alert=result.should_alert,
+        matched_keywords=",".join(result.matched_keywords),
+        reasons=" | ".join(result.reasons),
+        reply_text=reply_text if result.should_alert else "",
+        status="alerted" if result.should_alert else "skipped",
+        created_at=utcnow(),
+        updated_at=utcnow(),
+    )
+
+    if result.should_alert and send_sms:
+        ok, detail = send_lead_sms(
+            to_number=business.alert_phone,
+            group_name=lead.group_name,
+            snippet=lead.post_text,
+            reply_text=reply_text,
+            post_url=lead.post_url,
+        )
+        lead.sms_sent = ok
+        lead.sms_error = "" if ok else detail
+        if ok:
+            lead.status = "sms_sent"
+
+    db.add(lead)
+    db.commit()
+    db.refresh(lead)
+    return lead
+
+
 @app.get("/api/health")
 def health():
     return {
@@ -78,6 +140,7 @@ def health():
         "twilio": bool(
             settings.twilio_account_sid and settings.twilio_auth_token and settings.twilio_from_number
         ),
+        "webhook": bool(settings.webhook_shared_secret),
     }
 
 
@@ -123,51 +186,42 @@ def list_leads(
 
 @app.post("/api/ingest", response_model=LeadOut)
 def ingest_post(payload: IngestRequest, db: Session = Depends(get_db)):
-    business = seed_if_empty(db)
-    if payload.business_id and payload.business_id != business.id:
-        found = db.query(Business).filter(Business.id == payload.business_id).first()
-        if not found:
-            raise HTTPException(status_code=404, detail="Business not found")
-        business = found
-
-    result = classify_post(payload.text)
-    template = pick_template(db, business, result.trade)
-    reply_text = render_template(template.body, business) if template else ""
-
-    lead = Lead(
-        business_id=business.id,
+    business = resolve_business(db, payload.business_id)
+    lead = create_lead_from_post(
+        db,
+        business=business,
+        text=payload.text,
+        group_name=payload.group_name,
+        post_url=payload.post_url,
         source=payload.source,
-        group_name=payload.group_name.strip(),
-        post_text=payload.text.strip(),
-        post_url=payload.post_url.strip(),
-        intent=result.intent.value,
-        trade=result.trade,
-        confidence=result.confidence,
-        should_alert=result.should_alert,
-        matched_keywords=",".join(result.matched_keywords),
-        reasons=" | ".join(result.reasons),
-        reply_text=reply_text if result.should_alert else "",
-        status="alerted" if result.should_alert else "skipped",
-        created_at=utcnow(),
-        updated_at=utcnow(),
+        send_sms=payload.send_sms,
     )
+    return lead_to_out(lead)
 
-    if result.should_alert and payload.send_sms:
-        ok, detail = send_lead_sms(
-            to_number=business.alert_phone,
-            group_name=lead.group_name,
-            snippet=lead.post_text,
-            reply_text=reply_text,
-            post_url=lead.post_url,
-        )
-        lead.sms_sent = ok
-        lead.sms_error = "" if ok else detail
-        if ok:
-            lead.status = "sms_sent"
 
-    db.add(lead)
-    db.commit()
-    db.refresh(lead)
+@app.post("/api/hooks/posts", response_model=LeadOut)
+def hook_posts(
+    payload: HookPostRequest,
+    db: Session = Depends(get_db),
+    x_speedlead_secret: str | None = Header(default=None),
+):
+    """Intake for VA tools, Chrome extension, or monitoring partners."""
+    if not x_speedlead_secret or x_speedlead_secret != settings.webhook_shared_secret:
+        raise HTTPException(status_code=401, detail="Invalid webhook secret")
+
+    business = resolve_business(db, payload.business_id)
+    send_sms = (
+        settings.default_send_sms_on_hook if payload.send_sms is None else payload.send_sms
+    )
+    lead = create_lead_from_post(
+        db,
+        business=business,
+        text=payload.text,
+        group_name=payload.group_name,
+        post_url=payload.post_url,
+        source=payload.source or "webhook",
+        send_sms=send_sms,
+    )
     return lead_to_out(lead)
 
 

@@ -59,6 +59,15 @@ class BusinessUpdate(BaseModel):
     trades: str | None = None
 
 
+class HookPostRequest(BaseModel):
+    text: str = Field(min_length=3, max_length=8000)
+    group_name: str = ""
+    post_url: str = ""
+    source: str = "webhook"
+    business_id: int | None = None
+    send_sms: bool | None = None
+
+
 class StatusUpdate(BaseModel):
     status: str
 

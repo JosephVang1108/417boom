@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "SpeedLead Sender",
+  "version": "0.1.0",
+  "description": "Send a Facebook post to SpeedLead in one click so the shop gets alerted fast.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["https://*.facebook.com/*", "http://localhost/*", "http://127.0.0.1/*"],
+  "action": {
+    "default_title": "Send to SpeedLead",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html"
+}

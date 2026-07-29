@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SpeedLead Extension Settings</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 420px; margin: 24px; }
+    label { display: block; margin: 12px 0; font-weight: 600; }
+    input { width: 100%; padding: 10px; margin-top: 6px; }
+    button { margin-top: 12px; padding: 10px 14px; background: #e8451a; color: #fff; border: 0; border-radius: 8px; font-weight: 700; }
+    #saved { color: #0b7a5a; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>SpeedLead settings</h1>
+  <label>
+    App URL
+    <input id="apiBase" placeholder="http://127.0.0.1:4170" />
+  </label>
+  <label>
+    Webhook secret
+    <input id="secret" placeholder="dev-speedlead-hook" />
+  </label>
+  <button id="save" type="button">Save</button>
+  <p id="saved"></p>
+  <script src="options.js"></script>
+</body>
+</html>

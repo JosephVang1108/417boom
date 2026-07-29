@@ -27,9 +27,11 @@ Tap **Capture → Try hire request → Classify post**.
 ## Docs
 
 - [Product brief](docs/PRODUCT_BRIEF.md)
+- [How Facebook connection works](docs/FACEBOOK_CONNECTION.md) — **no official Groups API; here’s the real plan**
 - [HVAC + Plumbing pilot](docs/PILOT_HVAC_PLUMBING.md)
 - [TextRazor matcher](docs/TEXTRAZOR_MATCHER.md)
-- [SMS for many clients](docs/SMS_MULTI_TENANT.md) — **one Twilio number covers all clients**
+- [SMS for many clients](docs/SMS_MULTI_TENANT.md)
+- [Chrome extension](extension/README.md) — one-click send from Facebook
 
 ## Client experience
 

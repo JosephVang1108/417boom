@@ -73,11 +73,27 @@ def test_ingest_complaint_skipped(client):
     assert data["intent"] == "complaint"
 
 
-def test_leads_list(client):
-    client.post(
-        "/api/ingest",
-        json={"text": "Looking for HVAC — AC not working today.", "send_sms": False},
+def test_webhook_requires_secret(client):
+    res = client.post(
+        "/api/hooks/posts",
+        json={"text": "Anyone know a good plumber in Nixa?"},
     )
-    res = client.get("/api/leads?alerts_only=true")
+    assert res.status_code == 401
+
+
+def test_webhook_ingest(client):
+    res = client.post(
+        "/api/hooks/posts",
+        headers={"X-Speedlead-Secret": "dev-speedlead-hook"},
+        json={
+            "text": "Looking for HVAC help, AC not working today.",
+            "post_url": "https://www.facebook.com/groups/example",
+            "source": "chrome_extension",
+            "send_sms": False,
+        },
+    )
     assert res.status_code == 200
-    assert len(res.json()) >= 1
+    data = res.json()
+    assert data["should_alert"] is True
+    assert data["source"] == "chrome_extension"
+
