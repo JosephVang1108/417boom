@@ -2,42 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SpeedLead — HVAC & Plumbing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1420" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>SpeedLead</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="rail">
+  <div class="phone-shell">
+    <header class="app-header">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true"></span>
         <div>
           <strong>SpeedLead</strong>
-          <small>HVAC · Plumbing</small>
+          <small id="healthMeta">Starting…</small>
         </div>
       </div>
-      <nav class="rail-nav">
-        <button type="button" class="nav-btn is-active" data-view="inbox">Inbox</button>
-        <button type="button" class="nav-btn" data-view="intake">Capture</button>
-        <button type="button" class="nav-btn" data-view="settings">Settings</button>
-      </nav>
-      <div class="rail-meta" id="healthMeta">Starting…</div>
-    </aside>
+      <button type="button" class="icon-btn" id="refreshBtn" aria-label="Refresh">↻</button>
+    </header>
+
+    <div class="banner" id="modeBanner" hidden></div>
 
     <main class="main">
-      <div class="banner" id="modeBanner" hidden></div>
-      <header class="topbar">
-        <div>
-          <h1 id="viewTitle">Lead inbox</h1>
-          <p id="viewSubtitle">Hire-intent posts only — complaints stay quiet.</p>
-        </div>
-        <div class="topbar-actions">
-          <button type="button" class="btn btn-ghost" id="refreshBtn">Refresh</button>
-          <button type="button" class="btn btn-primary" id="gotoCaptureBtn">Capture post</button>
-        </div>
+      <header class="view-head">
+        <h1 id="viewTitle">Inbox</h1>
+        <p id="viewSubtitle">Hire requests only — complaints stay quiet.</p>
       </header>
 
       <section class="view is-active" id="view-inbox" data-panel="inbox">
@@ -53,69 +48,81 @@
 
       <section class="view" id="view-intake" data-panel="intake">
         <div class="demo-row">
-          <span class="muted">Try a sample:</span>
-          <button type="button" class="btn btn-ghost" data-demo="hire">Hire request</button>
-          <button type="button" class="btn btn-ghost" data-demo="complaint">Complaint</button>
+          <button type="button" class="chip" data-demo="hire">Try hire request</button>
+          <button type="button" class="chip" data-demo="complaint">Try complaint</button>
         </div>
         <form class="capture-form" id="captureForm">
           <label>
             <span>Facebook group</span>
-            <input name="group_name" placeholder="Springfield Moms" />
+            <input name="group_name" placeholder="Springfield Moms" autocomplete="off" />
           </label>
           <label>
             <span>Post link (optional)</span>
-            <input name="post_url" type="url" placeholder="https://facebook.com/groups/..." />
+            <input name="post_url" type="url" inputmode="url" placeholder="https://facebook.com/…" autocomplete="off" />
           </label>
           <label>
             <span>Post text</span>
-            <textarea name="text" rows="7" required placeholder="Paste the Facebook post here…"></textarea>
+            <textarea name="text" rows="6" required placeholder="Paste the Facebook post here…"></textarea>
           </label>
           <label class="check">
             <input type="checkbox" name="send_sms" id="sendSms" />
-            Send SMS if this is a hire request (needs Twilio)
+            Also text me if it’s a hire request
           </label>
-          <div class="form-actions">
-            <button class="btn btn-primary" type="submit">Classify &amp; ingest</button>
-            <p class="form-status" id="captureStatus" role="status"></p>
+          <p class="form-status" id="captureStatus" role="status"></p>
+          <aside class="result-panel" id="resultPanel" hidden></aside>
+          <div class="sticky-cta">
+            <button class="btn btn-primary btn-block" type="submit">Classify post</button>
           </div>
         </form>
-        <aside class="result-panel" id="resultPanel" hidden></aside>
       </section>
 
       <section class="view" id="view-settings" data-panel="settings">
         <form class="settings-form" id="settingsForm">
-          <div class="form-grid">
-            <label>
-              <span>Business name</span>
-              <input name="name" required />
-            </label>
-            <label>
-              <span>Owner name</span>
-              <input name="owner_name" required />
-            </label>
-            <label>
-              <span>Business phone (in replies)</span>
-              <input name="phone" required />
-            </label>
-            <label>
-              <span>Alert SMS phone</span>
-              <input name="alert_phone" required />
-            </label>
-            <label>
-              <span>City</span>
-              <input name="city" required />
-            </label>
-            <label>
-              <span>Trades</span>
-              <input name="trades" placeholder="hvac,plumbing" />
-            </label>
-          </div>
-          <button class="btn btn-primary" type="submit">Save settings</button>
+          <label>
+            <span>Business name</span>
+            <input name="name" required autocomplete="organization" />
+          </label>
+          <label>
+            <span>Your name</span>
+            <input name="owner_name" required autocomplete="name" />
+          </label>
+          <label>
+            <span>Business phone (in replies)</span>
+            <input name="phone" type="tel" inputmode="tel" required autocomplete="tel" />
+          </label>
+          <label>
+            <span>Alert SMS phone</span>
+            <input name="alert_phone" type="tel" inputmode="tel" required autocomplete="tel" />
+          </label>
+          <label>
+            <span>City</span>
+            <input name="city" required autocomplete="address-level2" />
+          </label>
+          <label>
+            <span>Trades</span>
+            <input name="trades" placeholder="hvac,plumbing" />
+          </label>
+          <button class="btn btn-primary btn-block" type="submit">Save settings</button>
           <p class="form-status" id="settingsStatus" role="status"></p>
         </form>
         <div class="templates" id="templatesBox"></div>
       </section>
     </main>
+
+    <nav class="tab-bar" aria-label="Primary">
+      <button type="button" class="tab-btn is-active" data-view="inbox">
+        <span class="tab-icon" aria-hidden="true">◈</span>
+        <span>Inbox</span>
+      </button>
+      <button type="button" class="tab-btn tab-btn-primary" data-view="intake" id="gotoCaptureBtn">
+        <span class="tab-icon tab-icon-plus" aria-hidden="true">＋</span>
+        <span>Capture</span>
+      </button>
+      <button type="button" class="tab-btn" data-view="settings">
+        <span class="tab-icon" aria-hidden="true">☰</span>
+        <span>Settings</span>
+      </button>
+    </nav>
   </div>
   <script src="matcher.js"></script>
   <script src="app.js"></script>

@@ -10,11 +10,11 @@ cp .env.example .env
 ./scripts/start.sh
 ```
 
-Open **http://localhost:4170** (or your machine IP on port 4170).
+Open **http://localhost:4170** on your phone (same Wi‑Fi) or desktop.
 
-You should land on the SpeedLead inbox. Tap **Capture post → Hire request → Classify**.
+Mobile-first UI: bottom tabs (**Inbox / Capture / Settings**), large tap targets, safe-area padding. On desktop it shows in a phone frame.
 
-If the API isn’t running, open `app/static/index.html` — local demo mode still classifies hire vs complaint.
+Tap **Capture → Try hire request → Classify post**.
 
 ## What you can do now
 

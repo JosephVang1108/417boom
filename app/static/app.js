@@ -65,16 +65,16 @@ const els = {
 
 const viewCopy = {
   inbox: {
-    title: "Lead inbox",
-    subtitle: "Hire-intent posts only — complaints stay quiet.",
+    title: "Inbox",
+    subtitle: "Hire requests only — complaints stay quiet.",
   },
   intake: {
-    title: "Capture a post",
-    subtitle: "Paste a Facebook group post. We classify intent, then alert if it’s a real ask.",
+    title: "Capture",
+    subtitle: "Paste a Facebook post. We alert only if they’re hiring.",
   },
   settings: {
-    title: "Business settings",
-    subtitle: "Reply merge fields and where SMS alerts go.",
+    title: "Settings",
+    subtitle: "Your reply details and alert phone.",
   },
 };
 
@@ -133,7 +133,7 @@ async function api(path, options = {}) {
 
 function setView(view) {
   state.view = view;
-  document.querySelectorAll(".nav-btn").forEach((btn) => {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.classList.toggle("is-active", btn.dataset.view === view);
   });
   document.querySelectorAll(".view").forEach((panel) => {
@@ -141,6 +141,8 @@ function setView(view) {
   });
   els.viewTitle.textContent = viewCopy[view].title;
   els.viewSubtitle.textContent = viewCopy[view].subtitle;
+  const main = document.querySelector(".main");
+  if (main) main.scrollTop = 0;
 }
 
 function escapeHtml(value) {
@@ -179,7 +181,7 @@ function renderLeads() {
   const leads = alertsOnly ? state.leads.filter((l) => l.should_alert) : state.leads;
   els.inboxCount.textContent = `${leads.length} shown`;
   if (!leads.length) {
-    els.leadList.innerHTML = `<div class="empty">No leads yet. Tap <strong>Capture post</strong>, then try a sample hire request.</div>`;
+    els.leadList.innerHTML = `<div class="empty">No leads yet.<br />Tap <strong>Capture</strong>, then try a sample hire request.</div>`;
     return;
   }
 
@@ -193,9 +195,9 @@ function renderLeads() {
             <code>${escapeHtml(lead.reply_text)}</code>
             <div class="lead-actions">
               <button type="button" class="btn btn-ghost" data-copy-lead="${lead.id}">Copy reply</button>
-              ${lead.post_url ? `<a class="btn btn-ghost" href="${escapeHtml(lead.post_url)}" target="_blank" rel="noopener">Open post</a>` : ""}
-              <button type="button" class="btn btn-ghost" data-status="${lead.id}" data-value="replied">Mark replied</button>
-              <button type="button" class="btn btn-primary" data-status="${lead.id}" data-value="won">Won</button>
+              <button type="button" class="btn btn-ghost" data-status="${lead.id}" data-value="replied">Replied</button>
+              ${lead.post_url ? `<a class="btn btn-ghost btn-span" href="${escapeHtml(lead.post_url)}" target="_blank" rel="noopener">Open Facebook post</a>` : ""}
+              <button type="button" class="btn btn-primary btn-span" data-status="${lead.id}" data-value="won">Mark won</button>
             </div>
           </div>`
         : `<div class="meta-row"><span>Reason: ${escapeHtml((lead.reasons || []).join("; "))}</span></div>`;
@@ -346,11 +348,10 @@ async function loadHealth() {
   }
 }
 
-document.querySelectorAll(".nav-btn").forEach((btn) => {
+document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => setView(btn.dataset.view));
 });
 
-document.getElementById("gotoCaptureBtn").addEventListener("click", () => setView("intake"));
 document.getElementById("refreshBtn").addEventListener("click", () => {
   loadHealth().then(loadLeads);
 });
@@ -362,7 +363,7 @@ document.querySelectorAll("[data-demo]").forEach((btn) => {
     if (!demo) return;
     els.captureForm.group_name.value = demo.group_name;
     els.captureForm.text.value = demo.text;
-    els.captureStatus.textContent = "Sample loaded — tap Classify & ingest.";
+    els.captureStatus.textContent = "Sample loaded — tap Classify post.";
     els.captureStatus.classList.remove("is-error");
   });
 });
