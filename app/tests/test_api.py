@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+import os
+
+import pytest
+from fastapi.testclient import TestClient
+
+# Use an isolated DB for tests
+os.environ["DATABASE_URL"] = "sqlite:///./speedlead_test.db"
+os.environ["TEXTRAZOR_API_KEY"] = ""
+os.environ["TWILIO_ACCOUNT_SID"] = ""
+
+from app.db import Base, engine, SessionLocal  # noqa: E402
+from app.main import app  # noqa: E402
+from app.seed import seed_if_empty  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def fresh_db():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    seed_if_empty(db)
+    db.close()
+    yield
+
+
+@pytest.fixture
+def client():
+    return TestClient(app)
+
+
+def test_health(client):
+    res = client.get("/api/health")
+    assert res.status_code == 200
+    assert res.json()["ok"] is True
+
+
+def test_ingest_hire_request(client):
+    res = client.post(
+        "/api/ingest",
+        json={
+            "text": "Anyone know a good plumber in Nixa? Toilet overflowing ASAP.",
+            "group_name": "Nixa Neighbors",
+            "send_sms": False,
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["should_alert"] is True
+    assert data["intent"] == "hire_request"
+    assert data["trade"] == "plumbing"
+    assert "Ozark Comfort Pros" in data["reply_text"] or "Mike" in data["reply_text"]
+
+
+def test_ingest_complaint_skipped(client):
+    res = client.post(
+        "/api/ingest",
+        json={
+            "text": "Stay away from Joe's Plumbing. Worst plumber ever, complete scam.",
+            "group_name": "Springfield Moms",
+            "send_sms": False,
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["should_alert"] is False
+    assert data["intent"] == "complaint"
+
+
+def test_leads_list(client):
+    client.post(
+        "/api/ingest",
+        json={"text": "Looking for HVAC — AC not working today.", "send_sms": False},
+    )
+    res = client.get("/api/leads?alerts_only=true")
+    assert res.status_code == 200
+    assert len(res.json()) >= 1

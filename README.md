@@ -1,23 +1,42 @@
 # SpeedLead
 
-SaaS concept: alert local businesses the moment someone asks for their service in a Facebook group — with a one-tap prefilled reply.
+SaaS MVP: alert HVAC & plumbing shops when a Facebook group post is a **hire request**, not a complaint — with a prefilled reply ready to paste.
 
-## Docs
-
-- [Product brief](docs/PRODUCT_BRIEF.md) — full vision, Meta constraints, MVP phases, pricing
-- [Brainstorm notes](docs/BRAINSTORM.md) — short pitch and decisions
-- [HVAC + Plumbing pilot playbook](docs/PILOT_HVAC_PLUMBING.md) — keywords, templates, offer, checklist
-- [TextRazor matcher](docs/TEXTRAZOR_MATCHER.md) — hire-intent vs complaint semantics
-
-## Status
-
-Vertical locked: **HVAC + Plumbing** (417 market).  
-Intent matcher scaffolded with **TextRazor** (plus heuristic fallback). Concierge pilot next.
-
-## Matcher quickstart
+## Quick start
 
 ```bash
 pip install -r requirements.txt
-python -m pytest matcher/tests -q
-python -m matcher --no-textrazor "Anyone know a good plumber in Nixa?"
+cp .env.example .env
+# optional: add TEXTRAZOR_API_KEY and Twilio credentials
+
+uvicorn app.main:app --reload --port 4170
 ```
+
+Open http://localhost:4170
+
+## What you can do now
+
+1. **Capture** a Facebook post (paste text)
+2. Matcher classifies **hire vs complaint** (TextRazor when keyed, else heuristics)
+3. Hire requests land in the **inbox** with a prefilled reply
+4. Optional **SMS** via Twilio to the shop’s alert phone
+5. Mark leads replied / won
+
+## Docs
+
+- [Product brief](docs/PRODUCT_BRIEF.md)
+- [HVAC + Plumbing pilot](docs/PILOT_HVAC_PLUMBING.md)
+- [TextRazor matcher](docs/TEXTRAZOR_MATCHER.md)
+
+## Tests
+
+```bash
+python -m pytest matcher/tests app/tests -q
+```
+
+## API
+
+- `POST /api/ingest` — `{ "text", "group_name?", "post_url?", "send_sms?" }`
+- `GET /api/leads`
+- `GET|PATCH /api/business`
+- `GET /api/health`

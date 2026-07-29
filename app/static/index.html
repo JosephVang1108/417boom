@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SpeedLead — HVAC & Plumbing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="rail">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <strong>SpeedLead</strong>
+          <small>HVAC · Plumbing</small>
+        </div>
+      </div>
+      <nav class="rail-nav">
+        <button type="button" class="nav-btn is-active" data-view="inbox">Inbox</button>
+        <button type="button" class="nav-btn" data-view="intake">Capture</button>
+        <button type="button" class="nav-btn" data-view="settings">Settings</button>
+      </nav>
+      <div class="rail-meta" id="healthMeta">Checking systems…</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Lead inbox</h1>
+          <p id="viewSubtitle">Hire-intent posts only — complaints stay quiet.</p>
+        </div>
+        <div class="topbar-actions">
+          <button type="button" class="btn btn-ghost" id="refreshBtn">Refresh</button>
+          <button type="button" class="btn btn-primary" id="gotoCaptureBtn">Capture post</button>
+        </div>
+      </header>
+
+      <section class="view is-active" id="view-inbox" data-panel="inbox">
+        <div class="filters">
+          <label class="check">
+            <input type="checkbox" id="alertsOnly" checked />
+            Alerts only
+          </label>
+          <span id="inboxCount" class="muted"></span>
+        </div>
+        <div class="lead-list" id="leadList"></div>
+      </section>
+
+      <section class="view" id="view-intake" data-panel="intake">
+        <form class="capture-form" id="captureForm">
+          <label>
+            <span>Facebook group</span>
+            <input name="group_name" placeholder="Springfield Moms" />
+          </label>
+          <label>
+            <span>Post link (optional)</span>
+            <input name="post_url" type="url" placeholder="https://facebook.com/groups/..." />
+          </label>
+          <label>
+            <span>Post text</span>
+            <textarea name="text" rows="7" required placeholder="Paste the Facebook post here…"></textarea>
+          </label>
+          <label class="check">
+            <input type="checkbox" name="send_sms" id="sendSms" checked />
+            Send SMS if this is a hire request
+          </label>
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Classify &amp; ingest</button>
+            <p class="form-status" id="captureStatus" role="status"></p>
+          </div>
+        </form>
+        <aside class="result-panel" id="resultPanel" hidden></aside>
+      </section>
+
+      <section class="view" id="view-settings" data-panel="settings">
+        <form class="settings-form" id="settingsForm">
+          <div class="form-grid">
+            <label>
+              <span>Business name</span>
+              <input name="name" required />
+            </label>
+            <label>
+              <span>Owner name</span>
+              <input name="owner_name" required />
+            </label>
+            <label>
+              <span>Business phone (in replies)</span>
+              <input name="phone" required />
+            </label>
+            <label>
+              <span>Alert SMS phone</span>
+              <input name="alert_phone" required />
+            </label>
+            <label>
+              <span>City</span>
+              <input name="city" required />
+            </label>
+            <label>
+              <span>Trades</span>
+              <input name="trades" placeholder="hvac,plumbing" />
+            </label>
+          </div>
+          <button class="btn btn-primary" type="submit">Save settings</button>
+          <p class="form-status" id="settingsStatus" role="status"></p>
+        </form>
+        <div class="templates" id="templatesBox"></div>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
