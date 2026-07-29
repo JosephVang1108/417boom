@@ -1,0 +1,27 @@
+{
+  "name": "SpeedLead",
+  "short_name": "SpeedLead",
+  "description": "Catch local HVAC and plumbing jobs from Facebook groups fast.",
+  "start_url": "/static/index.html",
+  "display": "standalone",
+  "background_color": "#f6f7f9",
+  "theme_color": "#e8451a",
+  "orientation": "portrait",
+  "share_target": {
+    "action": "/static/index.html",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "icons": [
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

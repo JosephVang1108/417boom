@@ -1,0 +1,50 @@
+[
+  {
+    "id": "hire_plumber",
+    "text": "Anyone know a good plumber in Nixa? Toilet overflowing ASAP.",
+    "expected_intent": "hire_request",
+    "should_alert": true
+  },
+  {
+    "id": "hire_hvac",
+    "text": "Looking for an HVAC tech — AC not working in Battlefield, need someone today.",
+    "expected_intent": "hire_request",
+    "should_alert": true
+  },
+  {
+    "id": "hire_after_bad_experience",
+    "text": "Looking for a new plumber. Last one was terrible and overcharged us.",
+    "expected_intent": "hire_request",
+    "should_alert": true
+  },
+  {
+    "id": "complaint_plumber",
+    "text": "Stay away from Joe's Plumbing. Worst plumber ever, complete scam and nightmare.",
+    "expected_intent": "complaint",
+    "should_alert": false
+  },
+  {
+    "id": "complaint_hvac",
+    "text": "Our HVAC guy sucks. Unprofessional, no show, ripped off — do not use them.",
+    "expected_intent": "complaint",
+    "should_alert": false
+  },
+  {
+    "id": "job_hiring",
+    "text": "Now hiring plumber and HVAC technician. Apply now — join our team!",
+    "expected_intent": "job_posting",
+    "should_alert": false
+  },
+  {
+    "id": "diy",
+    "text": "How do I fix a clogged drain myself? Any DIY youtube tips?",
+    "expected_intent": "diy_noise",
+    "should_alert": false
+  },
+  {
+    "id": "unrelated",
+    "text": "Anyone want to go hiking this weekend at Busiek?",
+    "expected_intent": "unrelated",
+    "should_alert": false
+  }
+]

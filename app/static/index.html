@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#e8451a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>SpeedLead</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="phone-shell">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <strong>SpeedLead</strong>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="view is-active" id="view-home" data-panel="home">
+        <div class="hero-copy">
+          <h1>New jobs</h1>
+          <p>When someone needs help, open Facebook and reply like yourself.</p>
+        </div>
+        <div id="leadList" class="lead-list"></div>
+      </section>
+
+      <section class="view" id="view-paste" data-panel="paste">
+        <div class="hero-copy">
+          <h1>Paste a post</h1>
+          <p>Paste the Facebook post. If it’s a real job, you can jump straight into the thread.</p>
+        </div>
+
+        <div class="demo-row">
+          <button type="button" class="chip" data-demo="hire">See a real job example</button>
+          <button type="button" class="chip" data-demo="complaint">See a complaint example</button>
+        </div>
+
+        <form id="captureForm" class="simple-form">
+          <label>
+            <span>Facebook post link</span>
+            <input name="post_url" type="url" inputmode="url" placeholder="Paste the post link from Facebook" autocomplete="off" />
+          </label>
+          <label>
+            <span>Group name <em>(optional)</em></span>
+            <input name="group_name" placeholder="ex: Springfield Moms" autocomplete="off" />
+          </label>
+          <label>
+            <span>The post</span>
+            <textarea name="text" rows="7" required placeholder="Paste the Facebook post here"></textarea>
+          </label>
+          <p class="form-status" id="captureStatus" role="status"></p>
+          <button class="btn btn-primary btn-block" type="submit">Check this post</button>
+        </form>
+
+        <div id="resultCard" class="result-card" hidden></div>
+      </section>
+
+      <section class="view" id="view-me" data-panel="me">
+        <div class="hero-copy">
+          <h1>My info</h1>
+          <p>Used only if you want a suggested reply. Keep it sounding like you.</p>
+        </div>
+
+        <form id="settingsForm" class="simple-form">
+          <label>
+            <span>Your first name</span>
+            <input name="owner_name" required autocomplete="given-name" placeholder="Mike" />
+          </label>
+          <label>
+            <span>Business name</span>
+            <input name="name" required autocomplete="organization" placeholder="Ozark Comfort Pros" />
+          </label>
+          <label>
+            <span>Your phone (how locals write it)</span>
+            <input name="phone" type="tel" inputmode="tel" required autocomplete="tel" placeholder="(417) 555-0199" />
+          </label>
+          <label>
+            <span>Cell for job alerts</span>
+            <input name="alert_phone" type="tel" inputmode="tel" required autocomplete="tel" placeholder="(417) 555-0199" />
+          </label>
+          <label>
+            <span>City you serve</span>
+            <input name="city" required autocomplete="address-level2" placeholder="Springfield" />
+          </label>
+          <input type="hidden" name="trades" value="hvac,plumbing" />
+          <button class="btn btn-primary btn-block" type="submit">Save</button>
+          <p class="form-status" id="settingsStatus" role="status"></p>
+        </form>
+      </section>
+    </main>
+
+    <nav class="tab-bar" aria-label="Primary">
+      <button type="button" class="tab-btn is-active" data-view="home">
+        <span class="tab-icon" aria-hidden="true">●</span>
+        <span>Jobs</span>
+      </button>
+      <button type="button" class="tab-btn tab-btn-primary" data-view="paste">
+        <span class="tab-icon tab-icon-plus" aria-hidden="true">＋</span>
+        <span>Paste</span>
+      </button>
+      <button type="button" class="tab-btn" data-view="me">
+        <span class="tab-icon" aria-hidden="true">☺</span>
+        <span>Me</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="matcher.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
