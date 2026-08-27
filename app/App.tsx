@@ -7,13 +7,13 @@ import {
   PanResponder,
   Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native';
 import { JesusFaceHandle } from './src/components/JesusFace';
 import JesusPortrait from './src/components/JesusPortrait';
 import SettingsModal from './src/components/SettingsModal';
@@ -32,11 +32,11 @@ interface Exchange {
   response: GuideResponse | null; // null while waiting for the answer
 }
 
-const FACE_SIZE = Math.min(Dimensions.get('window').width * 0.72, 300);
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 export default function App() {
   const faceRef = useRef<JesusFaceHandle>(null);
-  const faceBox = useRef({ w: FACE_SIZE, h: FACE_SIZE * 1.2 });
+  const touchZone = useRef({ w: SCREEN_W, h: SCREEN_H * 0.5 });
   const scrollRef = useRef<ScrollView>(null);
   const nextId = useRef(1);
 
@@ -52,7 +52,7 @@ export default function App() {
     loadStoredKey().then(setAiReady);
   }, []);
 
-  // Dragging a finger over the face moves the gaze toward it.
+  // Dragging a finger over the face leans him toward it.
   const pan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -63,8 +63,8 @@ export default function App() {
   ).current;
 
   const track = (x: number, y: number) => {
-    const { w, h } = faceBox.current;
-    faceRef.current?.lookToward((x - w / 2) / (w / 2), (y - h * 0.44) / (h / 2));
+    const { w, h } = touchZone.current;
+    faceRef.current?.lookToward((x - w / 2) / (w / 2), (y - h / 2) / (h / 2));
   };
 
   const speak = (response: GuideResponse) => {
@@ -124,129 +124,138 @@ export default function App() {
   const latest = history[history.length - 1];
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.header}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>Abide</Text>
-            {aiReady && <Text style={styles.aiBadge}>AI</Text>}
-          </View>
-          <View style={styles.headerActions}>
-            <Pressable onPress={toggleVoice} hitSlop={12}>
-              <Text style={styles.voiceToggle}>{voiceOn ? '🔊 Voice on' : '🔇 Voice off'}</Text>
-            </Pressable>
-            <Pressable onPress={() => setSettingsOpen(true)} hitSlop={12}>
-              <Text style={styles.voiceToggle}>⚙️</Text>
-            </Pressable>
-          </View>
-        </View>
 
-        <View style={styles.faceArea}>
+      {/* Full-screen portrait behind everything */}
+      <View style={StyleSheet.absoluteFill}>
+        <JesusPortrait
+          ref={faceRef}
+          width={SCREEN_W}
+          height={SCREEN_H}
+          speaking={speaking}
+          listening={listening}
+        />
+      </View>
+
+      <SafeAreaView style={styles.flex}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.header}>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>ABIDE</Text>
+              {aiReady && <Text style={styles.aiBadge}>AI</Text>}
+            </View>
+            <View style={styles.headerActions}>
+              <Pressable onPress={toggleVoice} hitSlop={12}>
+                <Text style={styles.voiceToggle}>{voiceOn ? '🔊' : '🔇'}</Text>
+              </Pressable>
+              <Pressable onPress={() => setSettingsOpen(true)} hitSlop={12}>
+                <Text style={styles.voiceToggle}>⚙️</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* The face itself — touch to have him lean toward you */}
           <View
-            style={{ width: FACE_SIZE, height: FACE_SIZE * 1.2 }}
+            style={styles.faceTouchZone}
             onLayout={(e) =>
-              (faceBox.current = {
+              (touchZone.current = {
                 w: e.nativeEvent.layout.width,
                 h: e.nativeEvent.layout.height,
               })
             }
             {...pan.panHandlers}
           >
-            <JesusPortrait
-              ref={faceRef}
-              size={FACE_SIZE}
-              speaking={speaking}
-              listening={listening}
-            />
+            {speaking && (
+              <Pressable onPress={stopSpeaking} style={styles.stopButton}>
+                <Text style={styles.stopButtonText}>Tap to pause</Text>
+              </Pressable>
+            )}
           </View>
-          {speaking && (
-            <Pressable onPress={stopSpeaking} style={styles.stopButton}>
-              <Text style={styles.stopButtonText}>Tap to pause</Text>
-            </Pressable>
-          )}
-        </View>
 
-        <ScrollView
-          ref={scrollRef}
-          style={styles.conversation}
-          contentContainerStyle={styles.conversationContent}
-          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
-        >
-          {history.length === 0 && (
-            <Text style={styles.hint}>
-              Share what is on your heart — a worry, a joy, a question. I will
-              listen and answer with words of scripture.
-            </Text>
-          )}
-          {history.map((ex) => (
-            <View key={ex.id} style={styles.exchange}>
-              <View style={styles.userBubble}>
-                <Text style={styles.userText}>{ex.question}</Text>
-              </View>
-              {ex.response ? (
-                <View
-                  style={[
-                    styles.replyCard,
-                    latest?.id === ex.id && styles.replyCardLatest,
-                  ]}
-                >
-                  <Text style={styles.replyIntro}>{ex.response.intro}</Text>
-                  <Text style={styles.verseText}>“{ex.response.verse.text}”</Text>
-                  <Text style={styles.verseRef}>— {ex.response.verse.ref}</Text>
-                </View>
-              ) : (
-                <View style={styles.replyCard}>
-                  <Text style={styles.replyIntro}>…</Text>
-                </View>
-              )}
-            </View>
-          ))}
-        </ScrollView>
-
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            onFocus={() => setListening(true)}
-            onBlur={() => setListening(false)}
-            onSubmitEditing={send}
-            placeholder="Speak what is on your heart…"
-            placeholderTextColor="#8B93A8"
-            returnKeyType="send"
-            multiline={false}
-          />
-          <Pressable
-            onPress={send}
-            style={({ pressed }) => [styles.sendButton, pressed && styles.sendPressed]}
+          <ScrollView
+            ref={scrollRef}
+            style={styles.conversation}
+            contentContainerStyle={styles.conversationContent}
+            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
           >
-            <Text style={styles.sendText}>➤</Text>
-          </Pressable>
-        </View>
+            {history.length === 0 && (
+              <Text style={styles.hint}>
+                Share what is on your heart — a worry, a joy, a question. I will
+                listen and answer with words of scripture.
+              </Text>
+            )}
+            {history.map((ex) => (
+              <View key={ex.id} style={styles.exchange}>
+                <View style={styles.userBubble}>
+                  <Text style={styles.userText}>{ex.question}</Text>
+                </View>
+                {ex.response ? (
+                  <View
+                    style={[
+                      styles.replyCard,
+                      latest?.id === ex.id && styles.replyCardLatest,
+                    ]}
+                  >
+                    <Text style={styles.replyIntro}>{ex.response.intro}</Text>
+                    <Text style={styles.verseText}>“{ex.response.verse.text}”</Text>
+                    <Text style={styles.verseRef}>— {ex.response.verse.ref}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.replyCard}>
+                    <Text style={styles.replyIntro}>…</Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
 
-        <SettingsModal
-          visible={settingsOpen}
-          hasKey={aiReady}
-          onSave={saveKey}
-          onClear={clearKey}
-          onClose={() => setSettingsOpen(false)}
-        />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          <View style={styles.inputBar}>
+            <TextInput
+              style={styles.input}
+              value={input}
+              onChangeText={setInput}
+              onFocus={() => setListening(true)}
+              onBlur={() => setListening(false)}
+              onSubmitEditing={send}
+              placeholder="Speak what is on your heart…"
+              placeholderTextColor="#7A7A72"
+              returnKeyType="send"
+              multiline={false}
+            />
+            <Pressable
+              onPress={send}
+              style={({ pressed }) => [styles.sendButton, pressed && styles.sendPressed]}
+            >
+              <Text style={styles.sendText}>➤</Text>
+            </Pressable>
+          </View>
+
+          <SettingsModal
+            visible={settingsOpen}
+            hasKey={aiReady}
+            onSave={saveKey}
+            onClear={clearKey}
+            onClose={() => setSettingsOpen(false)}
+          />
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#141B2E',
+    backgroundColor: '#000000',
+  },
+  flex: {
+    flex: 1,
     paddingTop: Platform.OS === 'android' ? 32 : 0,
   },
-  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -255,10 +264,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: {
-    color: '#F0E6CE',
-    fontSize: 22,
+    color: 'rgba(240, 230, 206, 0.9)',
+    fontSize: 17,
     fontWeight: '600',
-    letterSpacing: 3,
+    letterSpacing: 6,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowRadius: 6,
   },
   titleRow: {
     flexDirection: 'row',
@@ -266,11 +277,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   aiBadge: {
-    color: '#10162A',
-    backgroundColor: '#B9964E',
-    fontSize: 11,
+    color: '#0A0A0A',
+    backgroundColor: 'rgba(185, 150, 78, 0.9)',
+    fontSize: 10,
     fontWeight: '700',
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
     overflow: 'hidden',
@@ -278,49 +289,55 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 18,
   },
   voiceToggle: {
-    color: '#B8C0D4',
-    fontSize: 13,
+    fontSize: 16,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowRadius: 6,
   },
-  faceArea: {
+  faceTouchZone: {
+    flex: 1,
     alignItems: 'center',
-    paddingTop: 4,
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
   },
   stopButton: {
-    marginTop: 2,
     paddingHorizontal: 14,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 14,
-    backgroundColor: '#232D47',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(185, 150, 78, 0.4)',
   },
   stopButtonText: {
-    color: '#C9D2E8',
+    color: 'rgba(240, 230, 206, 0.9)',
     fontSize: 12,
   },
   conversation: {
-    flex: 1,
-    marginTop: 6,
+    maxHeight: SCREEN_H * 0.34,
+    flexGrow: 0,
   },
   conversationContent: {
     paddingHorizontal: 18,
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
   hint: {
-    color: '#8B93A8',
+    color: 'rgba(230, 230, 220, 0.75)',
     fontSize: 14,
     lineHeight: 21,
     textAlign: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 10,
+    paddingHorizontal: 28,
+    paddingBottom: 6,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowRadius: 8,
   },
   exchange: {
     marginBottom: 14,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#2C3A5C',
+    backgroundColor: 'rgba(255,255,255,0.10)',
     borderRadius: 16,
     borderBottomRightRadius: 4,
     paddingHorizontal: 14,
@@ -329,24 +346,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   userText: {
-    color: '#E8ECF6',
+    color: 'rgba(240, 240, 235, 0.95)',
     fontSize: 15,
   },
   replyCard: {
     alignSelf: 'flex-start',
-    backgroundColor: '#1D2740',
+    backgroundColor: 'rgba(8, 8, 8, 0.72)',
     borderRadius: 16,
     borderTopLeftRadius: 4,
     padding: 14,
     maxWidth: '92%',
     borderWidth: 1,
-    borderColor: '#2A3552',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   replyCardLatest: {
-    borderColor: '#B9964E',
+    borderColor: 'rgba(185, 150, 78, 0.75)',
   },
   replyIntro: {
-    color: '#DDE3F0',
+    color: 'rgba(235, 235, 230, 0.95)',
     fontSize: 15,
     lineHeight: 22,
     marginBottom: 10,
@@ -358,7 +375,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   verseRef: {
-    color: '#B9964E',
+    color: '#C8A45C',
     fontSize: 13,
     marginTop: 8,
     fontWeight: '600',
@@ -368,24 +385,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 18 : 12,
+    paddingBottom: Platform.OS === 'ios' ? 6 : 12,
     gap: 10,
-    backgroundColor: '#10162A',
+    backgroundColor: 'transparent',
   },
   input: {
     flex: 1,
-    backgroundColor: '#1D2740',
-    color: '#EDF0F8',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    color: '#F2F2EE',
     borderRadius: 22,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
   sendButton: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#B9964E',
+    backgroundColor: 'rgba(185, 150, 78, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -393,7 +412,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   sendText: {
-    color: '#10162A',
+    color: '#0A0A0A',
     fontSize: 18,
     fontWeight: '700',
   },

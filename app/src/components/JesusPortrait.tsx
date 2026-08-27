@@ -5,32 +5,40 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Animated, Easing, Image, StyleSheet } from 'react-native';
-import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
+import Svg, {
+  Circle,
+  Defs,
+  LinearGradient,
+  RadialGradient,
+  Rect,
+  Stop,
+} from 'react-native-svg';
 import JesusFace, { JesusFaceHandle } from './JesusFace';
 
-// Realistic 4K portrait generated with OpenArt (Nano Banana 2).
+// Realistic 4K portrait generated with OpenArt (Nano Banana 2),
+// re-lit against pure black so it blends into the app background.
 // TODO: bundle this file locally before a store release.
-const PORTRAIT_URL =
-  'https://cdn.openart.ai/openart-ai/production/2026-08/create-image/JZMxRtTkpmFe2dgMdSQI/image_1787806329208_3da2b955_1787806329988_800c86b5.png';
+export const PORTRAIT_URL =
+  'https://cdn.openart.ai/openart-ai/production/2026-08/create-image/JZMxRtTkpmFe2dgMdSQI/image_1787807278217_1afe6b3c_1787807280459_5703c9a4.png';
 
 interface Props {
-  size?: number;
+  width: number;
+  height: number;
   listening?: boolean;
   speaking?: boolean;
 }
 
 /**
- * The realistic portrait face: breathes slowly, glows while speaking,
- * and leans gently toward touch. Falls back to the drawn animated face
- * if the image cannot load (e.g. no internet on first run).
+ * Full-bleed portrait: fills the screen against pure black, breathes
+ * slowly, a heavenly glow pulses (stronger while speaking), and he
+ * leans gently toward touch. Falls back to the drawn animated face if
+ * the image cannot load (e.g. no internet on first run).
  */
 const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
-  { size = 300, listening = false, speaking = false },
+  { width, height, listening = false, speaking = false },
   ref
 ) {
-  const height = size * 1.2;
-
   const [imageFailed, setImageFailed] = useState(false);
   const fallbackRef = useRef<JesusFaceHandle>(null);
 
@@ -99,10 +107,10 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
     return () => loop.stop();
   }, [breath]);
 
-  // Aura: gentle pulse normally, brighter and faster while speaking.
+  // Heavenly glow: soft pulse normally, brighter and faster while speaking.
   useEffect(() => {
-    const duration = speaking ? 900 : 3000;
-    const peak = speaking ? 1 : listening ? 0.7 : 0.45;
+    const duration = speaking ? 900 : 3200;
+    const peak = speaking ? 0.55 : listening ? 0.38 : 0.25;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(glow, {
@@ -112,7 +120,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
           useNativeDriver: true,
         }),
         Animated.timing(glow, {
-          toValue: peak * 0.4,
+          toValue: peak * 0.35,
           duration,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
@@ -130,13 +138,13 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
       Animated.parallel([
         Animated.timing(gazeX, {
           toValue: (Math.random() - 0.5) * 0.5,
-          duration: 2000,
+          duration: 2200,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(gazeY, {
           toValue: (Math.random() - 0.5) * 0.3,
-          duration: 2000,
+          duration: 2200,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
@@ -147,57 +155,39 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
 
   if (imageFailed) {
     return (
-      <JesusFace
-        ref={fallbackRef}
-        size={size}
-        listening={listening}
-        speaking={speaking}
-      />
+      <View style={[styles.fallbackWrap, { width, height }]}>
+        <JesusFace
+          ref={fallbackRef}
+          size={Math.min(width * 0.8, 320)}
+          listening={listening}
+          speaking={speaking}
+        />
+      </View>
     );
   }
 
   const breathScale = breath.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, 1.015],
+    outputRange: [1, 1.012],
   });
   const leanX = gazeX.interpolate({
     inputRange: [-1, 1],
-    outputRange: [-6, 6],
+    outputRange: [-8, 8],
   });
   const leanY = gazeY.interpolate({
     inputRange: [-1, 1],
-    outputRange: [-4, 4],
-  });
-  const tilt = gazeX.interpolate({
-    inputRange: [-1, 1],
-    outputRange: ['-1.5deg', '1.5deg'],
+    outputRange: [-5, 5],
   });
 
   return (
-    <Animated.View style={{ width: size, height }}>
-      {/* Golden aura behind the portrait */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: glow }]}>
-        <Svg width={size} height={height}>
-          <Defs>
-            <RadialGradient id="aura" cx="50%" cy="42%" r="60%">
-              <Stop offset="0%" stopColor="#F7D774" stopOpacity="0.8" />
-              <Stop offset="60%" stopColor="#F7D774" stopOpacity="0.25" />
-              <Stop offset="100%" stopColor="#F7D774" stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Circle cx={size / 2} cy={height * 0.45} r={size * 0.62} fill="url(#aura)" />
-        </Svg>
-      </Animated.View>
-
+    <View style={[styles.container, { width, height }]}>
       <Animated.View
         style={[
-          styles.portraitFrame,
+          StyleSheet.absoluteFill,
           {
-            borderRadius: size * 0.09,
             transform: [
               { translateX: leanX },
               { translateY: leanY },
-              { rotate: tilt },
               { scale: breathScale },
             ],
           },
@@ -209,31 +199,56 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
           resizeMode="cover"
           onError={() => setImageFailed(true)}
         />
-        {/* Vignette so the portrait melts into the dark background */}
-        <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+      </Animated.View>
+
+      {/* Heavenly glow above the face, pulsing */}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { opacity: glow }]}
+        pointerEvents="none"
+      >
+        <Svg width={width} height={height}>
           <Defs>
-            <RadialGradient id="vignette" cx="50%" cy="45%" r="72%">
-              <Stop offset="0%" stopColor="#141B2E" stopOpacity="0" />
-              <Stop offset="78%" stopColor="#141B2E" stopOpacity="0" />
-              <Stop offset="100%" stopColor="#141B2E" stopOpacity="0.9" />
+            <RadialGradient id="halo" cx="50%" cy="30%" r="45%">
+              <Stop offset="0%" stopColor="#F7D774" stopOpacity="0.7" />
+              <Stop offset="55%" stopColor="#F7D774" stopOpacity="0.2" />
+              <Stop offset="100%" stopColor="#F7D774" stopOpacity="0" />
             </RadialGradient>
           </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#vignette)" />
+          <Circle cx={width / 2} cy={height * 0.3} r={width * 0.7} fill="url(#halo)" />
         </Svg>
       </Animated.View>
-    </Animated.View>
+
+      {/* Fade the lower part into black so the conversation reads clearly */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Svg width={width} height={height}>
+          <Defs>
+            <LinearGradient id="bottomFade" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#000000" stopOpacity="0" />
+              <Stop offset="0.55" stopColor="#000000" stopOpacity="0" />
+              <Stop offset="0.82" stopColor="#000000" stopOpacity="0.75" />
+              <Stop offset="1" stopColor="#000000" stopOpacity="0.97" />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width={width} height={height} fill="url(#bottomFade)" />
+        </Svg>
+      </View>
+    </View>
   );
 });
 
 const styles = StyleSheet.create({
-  portraitFrame: {
-    flex: 1,
+  container: {
+    backgroundColor: '#000000',
     overflow: 'hidden',
-    backgroundColor: '#1D2740',
   },
   portrait: {
     width: '100%',
     height: '100%',
+  },
+  fallbackWrap: {
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
