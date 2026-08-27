@@ -20,6 +20,13 @@ Android. The app lives in the [`app/`](app/) folder.
   and the face's mouth animates in sync.
 - **Scripture** — verses use the World English Bible (WEB), a public-domain
   translation, so there are no licensing issues.
+- **AI conversations (optional)** — add an Anthropic API key in the ⚙️
+  settings and responses are powered by Claude: real understanding, real
+  multi-turn conversation, with a fitting verse chosen for each reply. The
+  key is stored securely on-device (`expo-secure-store`), and the app falls
+  back to the offline verse engine whenever AI is unavailable. For a public
+  release, route API calls through your own backend instead of shipping
+  user-entered keys.
 
 ## Run it on your phone
 
@@ -38,19 +45,22 @@ Android. The app lives in the [`app/`](app/) folder.
 
 ```
 app/
-├── App.tsx                      # Main screen: face, conversation, input bar
+├── App.tsx                          # Main screen: face, conversation, input bar
+├── metro.config.js                  # Shims Node builtins for the Anthropic SDK
 └── src/
-    ├── components/JesusFace.tsx # Animated SVG face (gaze, blink, talk)
-    ├── data/verses.ts           # Topical scripture database (WEB translation)
-    └── lib/guide.ts             # Topic matching + response composition
+    ├── components/JesusFace.tsx     # Animated SVG face (gaze, blink, talk)
+    ├── components/SettingsModal.tsx # API key entry for AI mode
+    ├── data/verses.ts               # Topical scripture database (WEB translation)
+    ├── lib/ai.ts                    # Claude-powered conversations (structured output)
+    └── lib/guide.ts                 # Offline topic matching + response composition
 ```
 
 ## Roadmap ideas (phase 2)
 
 - **Voice input** — real speech-to-text via `expo-speech-recognition`
   (requires an Expo dev build rather than Expo Go).
-- **AI conversations** — richer, context-aware responses powered by the
-  Claude API, with the verse engine as offline fallback.
+- **Backend proxy for AI** — move the Claude API call server-side so
+  customers don't need their own API key.
 - **Face tracking** — use the front camera so the eyes literally follow the
   user's face.
 - **Daily verse notifications**, prayer journal, and favorites.

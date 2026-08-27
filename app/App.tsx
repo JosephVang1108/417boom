@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   KeyboardAvoidingView,
@@ -15,12 +15,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native';
 import JesusFace, { JesusFaceHandle } from './src/components/JesusFace';
+import SettingsModal from './src/components/SettingsModal';
+import {
+  aiRespond,
+  hasApiKey,
+  loadStoredKey,
+  resetConversation,
+  setApiKey,
+} from './src/lib/ai';
 import { respond, spokenText, GuideResponse } from './src/lib/guide';
 
 interface Exchange {
   id: number;
   question: string;
-  response: GuideResponse;
+  response: GuideResponse | null; // null while waiting for the answer
 }
 
 const FACE_SIZE = Math.min(Dimensions.get('window').width * 0.72, 300);
@@ -36,6 +44,12 @@ export default function App() {
   const [speaking, setSpeaking] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
+  const [aiReady, setAiReady] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    loadStoredKey().then(setAiReady);
+  }, []);
 
   // Dragging a finger over the face moves the gaze toward it.
   const pan = useRef(
@@ -69,14 +83,36 @@ export default function App() {
     setSpeaking(false);
   };
 
-  const send = () => {
+  const send = async () => {
     const question = input.trim();
     if (!question) return;
-    const response = respond(question);
-    setHistory((h) => [...h, { id: nextId.current++, question, response }]);
+    const id = nextId.current++;
+    setHistory((h) => [...h, { id, question, response: null }]);
     setInput('');
-    if (voiceOn) speak(response);
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+
+    // Prefer Claude when a key is set; fall back to the offline verse engine.
+    let response: GuideResponse | null = null;
+    if (aiReady) {
+      response = await aiRespond(question);
+      if (!hasApiKey()) setAiReady(false); // key was rejected
+    }
+    if (!response) response = respond(question);
+
+    setHistory((h) => h.map((ex) => (ex.id === id ? { ...ex, response } : ex)));
+    if (voiceOn) speak(response);
+  };
+
+  const saveKey = async (key: string) => {
+    await setApiKey(key);
+    resetConversation();
+    setAiReady(hasApiKey());
+  };
+
+  const clearKey = async () => {
+    await setApiKey('');
+    resetConversation();
+    setAiReady(false);
   };
 
   const toggleVoice = () => {
@@ -94,10 +130,18 @@ export default function App() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Abide</Text>
-          <Pressable onPress={toggleVoice} hitSlop={12}>
-            <Text style={styles.voiceToggle}>{voiceOn ? '🔊 Voice on' : '🔇 Voice off'}</Text>
-          </Pressable>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Abide</Text>
+            {aiReady && <Text style={styles.aiBadge}>AI</Text>}
+          </View>
+          <View style={styles.headerActions}>
+            <Pressable onPress={toggleVoice} hitSlop={12}>
+              <Text style={styles.voiceToggle}>{voiceOn ? '🔊 Voice on' : '🔇 Voice off'}</Text>
+            </Pressable>
+            <Pressable onPress={() => setSettingsOpen(true)} hitSlop={12}>
+              <Text style={styles.voiceToggle}>⚙️</Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.faceArea}>
@@ -142,16 +186,22 @@ export default function App() {
               <View style={styles.userBubble}>
                 <Text style={styles.userText}>{ex.question}</Text>
               </View>
-              <View
-                style={[
-                  styles.replyCard,
-                  latest?.id === ex.id && styles.replyCardLatest,
-                ]}
-              >
-                <Text style={styles.replyIntro}>{ex.response.intro}</Text>
-                <Text style={styles.verseText}>“{ex.response.verse.text}”</Text>
-                <Text style={styles.verseRef}>— {ex.response.verse.ref}</Text>
-              </View>
+              {ex.response ? (
+                <View
+                  style={[
+                    styles.replyCard,
+                    latest?.id === ex.id && styles.replyCardLatest,
+                  ]}
+                >
+                  <Text style={styles.replyIntro}>{ex.response.intro}</Text>
+                  <Text style={styles.verseText}>“{ex.response.verse.text}”</Text>
+                  <Text style={styles.verseRef}>— {ex.response.verse.ref}</Text>
+                </View>
+              ) : (
+                <View style={styles.replyCard}>
+                  <Text style={styles.replyIntro}>…</Text>
+                </View>
+              )}
             </View>
           ))}
         </ScrollView>
@@ -176,6 +226,14 @@ export default function App() {
             <Text style={styles.sendText}>➤</Text>
           </Pressable>
         </View>
+
+        <SettingsModal
+          visible={settingsOpen}
+          hasKey={aiReady}
+          onSave={saveKey}
+          onClear={clearKey}
+          onClose={() => setSettingsOpen(false)}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -200,6 +258,26 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '600',
     letterSpacing: 3,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  aiBadge: {
+    color: '#10162A',
+    backgroundColor: '#B9964E',
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   voiceToggle: {
     color: '#B8C0D4',
