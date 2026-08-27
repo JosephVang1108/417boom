@@ -21,6 +21,7 @@ interface Props {
   onClearAiKey: () => void;
   onSaveVoiceKey: (key: string) => void;
   onClearVoiceKey: () => void;
+  onReplayWelcome: () => void;
   onClose: () => void;
 }
 
@@ -36,6 +37,7 @@ export default function SettingsModal({
   onClearAiKey,
   onSaveVoiceKey,
   onClearVoiceKey,
+  onReplayWelcome,
   onClose,
 }: Props) {
   const [aiDraft, setAiDraft] = useState('');
@@ -171,6 +173,9 @@ export default function SettingsModal({
             <Text style={styles.note}>
               Keys are stored securely on this device only.
             </Text>
+            <Pressable onPress={onReplayWelcome}>
+              <Text style={styles.removeLink}>Replay the welcome</Text>
+            </Pressable>
             <View style={styles.row}>
               <Pressable style={[styles.button, styles.buttonGhost]} onPress={onClose}>
                 <Text style={styles.buttonGhostText}>Close</Text>

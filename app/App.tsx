@@ -377,6 +377,10 @@ export default function App() {
             onClearVoiceKey={() => {
               voice.setVoiceKey('').then(() => setVoiceReady(false));
             }}
+            onReplayWelcome={() => {
+              setSettingsOpen(false);
+              setOnboardingVisible(true);
+            }}
             onClose={() => setSettingsOpen(false)}
           />
 
