@@ -12,9 +12,11 @@ import {
 interface Props {
   visible: boolean;
   userName: string;
+  voiceId: string;
   hasAiKey: boolean;
   hasVoiceKey: boolean;
   onSaveName: (name: string) => void;
+  onSaveVoiceId: (id: string) => void;
   onSaveAiKey: (key: string) => void;
   onClearAiKey: () => void;
   onSaveVoiceKey: (key: string) => void;
@@ -25,9 +27,11 @@ interface Props {
 export default function SettingsModal({
   visible,
   userName,
+  voiceId,
   hasAiKey,
   hasVoiceKey,
   onSaveName,
+  onSaveVoiceId,
   onSaveAiKey,
   onClearAiKey,
   onSaveVoiceKey,
@@ -37,14 +41,21 @@ export default function SettingsModal({
   const [aiDraft, setAiDraft] = useState('');
   const [voiceDraft, setVoiceDraft] = useState('');
   const [nameDraft, setNameDraft] = useState(userName);
+  const [voiceIdDraft, setVoiceIdDraft] = useState(voiceId);
 
   useEffect(() => {
-    if (visible) setNameDraft(userName);
-  }, [visible, userName]);
+    if (visible) {
+      setNameDraft(userName);
+      setVoiceIdDraft(voiceId);
+    }
+  }, [visible, userName, voiceId]);
 
   const save = () => {
     if (nameDraft.trim() !== userName) {
       onSaveName(nameDraft.trim());
+    }
+    if (voiceIdDraft.trim() !== voiceId) {
+      onSaveVoiceId(voiceIdDraft.trim());
     }
     if (aiDraft.trim()) {
       onSaveAiKey(aiDraft.trim());
@@ -125,6 +136,21 @@ export default function SettingsModal({
                 <Text style={styles.removeLink}>Remove voice key</Text>
               </Pressable>
             )}
+
+            <Text style={styles.section}>Custom voice (optional)</Text>
+            <Text style={styles.body}>
+              Design a voice in ElevenLabs (Voices → Voice Design), then paste
+              its Voice ID here to use it. Leave empty for the default voice.
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={voiceIdDraft}
+              onChangeText={setVoiceIdDraft}
+              placeholder="Voice ID, e.g. pNInz6obpgDQ…"
+              placeholderTextColor="#6E6E66"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
             <Text style={styles.note}>
               Keys are stored securely on this device only.

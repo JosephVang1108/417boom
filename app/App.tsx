@@ -60,12 +60,16 @@ export default function App() {
   const [transcribing, setTranscribing] = useState(false);
   const [praying, setPraying] = useState(false);
   const [userName, setUserName] = useState('');
+  const [voiceId, setVoiceId] = useState('');
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   useEffect(() => {
     loadStoredKey().then(setAiReady);
-    voice.loadVoiceKey().then(setVoiceReady);
+    voice.loadVoiceKey().then((ready) => {
+      setVoiceReady(ready);
+      setVoiceId(voice.getCustomVoiceId() ?? '');
+    });
     profile.loadName().then((n) => setUserName(n ?? ''));
   }, []);
 
@@ -331,10 +335,16 @@ export default function App() {
           <SettingsModal
             visible={settingsOpen}
             userName={userName}
+            voiceId={voiceId}
             hasAiKey={aiReady}
             hasVoiceKey={voiceReady}
             onSaveName={(name) => {
               profile.setName(name).then(() => setUserName(profile.getName() ?? ''));
+            }}
+            onSaveVoiceId={(id) => {
+              voice.setCustomVoiceId(id).then(() =>
+                setVoiceId(voice.getCustomVoiceId() ?? '')
+              );
             }}
             onSaveAiKey={saveKey}
             onClearAiKey={clearKey}

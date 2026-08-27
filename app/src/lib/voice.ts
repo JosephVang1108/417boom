@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Speech from 'expo-speech';
 
 const KEY_STORAGE = 'elevenlabs_api_key';
+const VOICE_ID_STORAGE = 'elevenlabs_voice_id';
 
 // "Jesus — Firm, Deep and Reassuring" from the ElevenLabs voice library.
 // Add it to My Voices in your ElevenLabs account (Voice Library → search
@@ -13,6 +14,7 @@ const ELEVEN_FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb';
 const ELEVEN_MODEL = 'eleven_multilingual_v2';
 
 let elevenKey: string | null = null;
+let customVoiceId: string | null = null;
 let currentPlayer: AudioPlayer | null = null;
 let audioModeReady = false;
 let generation = 0; // invalidates in-flight speech when stop() is called
@@ -20,10 +22,30 @@ let generation = 0; // invalidates in-flight speech when stop() is called
 export async function loadVoiceKey(): Promise<boolean> {
   try {
     elevenKey = await SecureStore.getItemAsync(KEY_STORAGE);
+    customVoiceId = await SecureStore.getItemAsync(VOICE_ID_STORAGE);
   } catch {
     elevenKey = null;
+    customVoiceId = null;
   }
   return !!elevenKey;
+}
+
+export async function setCustomVoiceId(id: string): Promise<void> {
+  const trimmed = id.trim();
+  customVoiceId = trimmed || null;
+  try {
+    if (trimmed) {
+      await SecureStore.setItemAsync(VOICE_ID_STORAGE, trimmed);
+    } else {
+      await SecureStore.deleteItemAsync(VOICE_ID_STORAGE);
+    }
+  } catch {
+    // Storage unavailable — id still applies this session.
+  }
+}
+
+export function getCustomVoiceId(): string | null {
+  return customVoiceId;
 }
 
 export async function setVoiceKey(key: string): Promise<void> {
@@ -116,13 +138,19 @@ async function speakEleven(
       }
     );
 
-  // Try the Jesus voice first; fall back to Brian if this account
-  // hasn't added it to My Voices yet.
-  let res = await request(ELEVEN_VOICE_ID);
-  if (!res.ok && res.status >= 400 && res.status < 500) {
-    res = await request(ELEVEN_FALLBACK_VOICE_ID);
+  // Order: the user's own chosen/designed voice, then the library
+  // Jesus voice, then Brian — first one this account can use wins.
+  const candidates = [
+    ...(customVoiceId ? [customVoiceId] : []),
+    ELEVEN_VOICE_ID,
+    ELEVEN_FALLBACK_VOICE_ID,
+  ];
+  let res: Response | null = null;
+  for (const voiceId of candidates) {
+    res = await request(voiceId);
+    if (res.ok || res.status < 400 || res.status >= 500) break;
   }
-  if (!res.ok) throw new Error(`ElevenLabs ${res.status}`);
+  if (!res || !res.ok) throw new Error(`ElevenLabs ${res?.status ?? 'error'}`);
 
   const bytes = new Uint8Array(await res.arrayBuffer());
   if (myGen !== generation) return;
