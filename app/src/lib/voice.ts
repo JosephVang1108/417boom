@@ -6,10 +6,10 @@ import * as Speech from 'expo-speech';
 const KEY_STORAGE = 'elevenlabs_api_key';
 const VOICE_ID_STORAGE = 'elevenlabs_voice_id';
 
-// "Jesus — Firm, Deep and Reassuring" from the ElevenLabs voice library.
-// Add it to My Voices in your ElevenLabs account (Voice Library → search
-// "Jesus" → Add). If unavailable, we fall back to "Brian" (deep, calm).
-const ELEVEN_VOICE_ID = '5IDdqnXnlsZ1FCxoOFYg';
+// The "Abide" voice — designed with ElevenLabs Voice Design: deep,
+// soft-spoken, ancient yet kind. Falls back to "Brian" (deep, calm)
+// for accounts that don't have it.
+const ELEVEN_VOICE_ID = 'pdNm5Q6lQvK6VrviGGq1';
 const ELEVEN_FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb';
 const ELEVEN_MODEL = 'eleven_multilingual_v2';
 

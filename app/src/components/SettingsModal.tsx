@@ -139,6 +139,22 @@ export default function SettingsModal({
 
             <Text style={styles.section}>Custom voice (optional)</Text>
             <Text style={styles.body}>
+              Paste the Voice ID of a voice from your ElevenLabs account —
+              for example one you created with Voice Design — and he will
+              speak with it.
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={voiceIdDraft}
+              onChangeText={setVoiceIdDraft}
+              placeholder="Voice ID…"
+              placeholderTextColor="#6E6E66"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <Text style={styles.section}>Custom voice (optional)</Text>
+            <Text style={styles.body}>
               Design a voice in ElevenLabs (Voices → Voice Design), then paste
               its Voice ID here to use it. Leave empty for the default voice.
             </Text>
