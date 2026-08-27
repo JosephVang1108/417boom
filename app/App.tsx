@@ -35,6 +35,9 @@ import {
   setApiKey,
 } from './src/lib/ai';
 import { backendConfigured } from './src/lib/config';
+import * as dailyVerse from './src/lib/dailyVerse';
+import * as journal from './src/lib/journal';
+import { touchStreak } from './src/lib/streak';
 import {
   displayText,
   encouragement,
@@ -74,6 +77,8 @@ export default function App() {
   const [voiceId, setVoiceId] = useState('');
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [bibleOpen, setBibleOpen] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [verseEnabled, setVerseEnabled] = useState(false);
 
   const recorder = useAudioRecorder({
     ...RecordingPresets.HIGH_QUALITY,
@@ -136,6 +141,12 @@ export default function App() {
     profile.loadProfile().then(({ name, onboarded }) => {
       setUserName(name ?? '');
       if (!onboarded) setOnboardingVisible(true);
+    });
+    touchStreak().then(setStreak);
+    journal.loadJournal();
+    dailyVerse.isDailyVerseEnabled().then((on) => {
+      setVerseEnabled(on);
+      if (on) dailyVerse.refreshSchedule();
     });
   }, []);
 
@@ -284,6 +295,7 @@ export default function App() {
     if (!response) response = respond(question);
 
     setHistory((h) => h.map((ex) => (ex.id === id ? { ...ex, response } : ex)));
+    if (response.isPrayer) journal.addPrayer(question);
     if (voiceOn) speak(response);
   };
 
@@ -328,9 +340,14 @@ export default function App() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <Text style={styles.title}>ABIDE</Text>
-              {aiReady && <Text style={styles.aiBadge}>AI</Text>}
+            <View>
+              <View style={styles.titleRow}>
+                <Text style={styles.title}>ABIDE</Text>
+                {aiReady && <Text style={styles.aiBadge}>AI</Text>}
+              </View>
+              {streak > 1 && (
+                <Text style={styles.streakText}>Day {streak} together</Text>
+              )}
             </View>
             <View style={styles.headerActions}>
               <Pressable
@@ -476,6 +493,19 @@ export default function App() {
               voice.setVoiceKey('').then(() => setVoiceReady(voice.voiceAvailable()));
             }}
             backendMode={backendConfigured()}
+            verseEnabled={verseEnabled}
+            journal={journal.getJournal()}
+            onToggleVerse={(enabled) => {
+              dailyVerse.setDailyVerseEnabled(enabled).then((ok) => {
+                setVerseEnabled(enabled && ok);
+                if (enabled && !ok) {
+                  Alert.alert(
+                    'Notifications needed',
+                    'Allow notifications in your phone settings to receive the daily verse.'
+                  );
+                }
+              });
+            }}
             onReplayWelcome={() => {
               setSettingsOpen(false);
               setOnboardingVisible(true);
@@ -529,6 +559,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  streakText: {
+    color: 'rgba(200, 164, 92, 0.85)',
+    fontSize: 11,
+    marginTop: 2,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowRadius: 4,
   },
   aiBadge: {
     color: '#0A0A0A',

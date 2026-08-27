@@ -4,10 +4,12 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { PrayerEntry } from '../lib/journal';
 
 interface Props {
   visible: boolean;
@@ -16,6 +18,9 @@ interface Props {
   hasAiKey: boolean;
   hasVoiceKey: boolean;
   backendMode: boolean;
+  verseEnabled: boolean;
+  journal: PrayerEntry[];
+  onToggleVerse: (enabled: boolean) => void;
   onSaveName: (name: string) => void;
   onSaveVoiceId: (id: string) => void;
   onSaveAiKey: (key: string) => void;
@@ -33,6 +38,9 @@ export default function SettingsModal({
   hasAiKey,
   hasVoiceKey,
   backendMode,
+  verseEnabled,
+  journal,
+  onToggleVerse,
   onSaveName,
   onSaveVoiceId,
   onSaveAiKey,
@@ -185,8 +193,32 @@ export default function SettingsModal({
               autoCorrect={false}
             />
 
+            <Text style={styles.section}>Daily verse</Text>
+            <View style={styles.toggleRow}>
+              <Text style={styles.body}>A morning verse at 8:00 AM</Text>
+              <Switch
+                value={verseEnabled}
+                onValueChange={onToggleVerse}
+                trackColor={{ true: '#B9964E' }}
+              />
+            </View>
+
+            {journal.length > 0 && (
+              <>
+                <Text style={styles.section}>Prayer journal</Text>
+                {journal.slice(0, 10).map((p) => (
+                  <View key={p.id} style={styles.journalEntry}>
+                    <Text style={styles.journalDate}>
+                      {new Date(p.date).toLocaleDateString()}
+                    </Text>
+                    <Text style={styles.journalText}>{p.request}</Text>
+                  </View>
+                ))}
+              </>
+            )}
+
             <Text style={styles.note}>
-              Keys are stored securely on this device only.
+              Everything here is stored on this device only.
             </Text>
             <Pressable onPress={onReplayWelcome}>
               <Text style={styles.removeLink}>Replay the welcome</Text>
@@ -255,6 +287,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  journalEntry: {
+    marginBottom: 10,
+  },
+  journalDate: {
+    color: '#8A8A82',
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  journalText: {
+    color: '#D8D8D0',
+    fontSize: 14,
+    lineHeight: 20,
   },
   removeLink: {
     color: '#9A9A92',
