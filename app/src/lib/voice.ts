@@ -16,7 +16,7 @@ const ELEVEN_FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb';
 // One engine for every reply so accent and pacing never shift between
 // (or within) messages: expressive v3 at its most consistent setting,
 // with a fixed seed. Multilingual v2 is the universal fallback.
-type ElevenModel = 'eleven_v3' | 'eleven_multilingual_v2';
+type ElevenModel = 'eleven_v3' | 'eleven_turbo_v2_5' | 'eleven_multilingual_v2';
 const VOICE_SEED = 42;
 
 let elevenKey: string | null = null;
@@ -81,6 +81,8 @@ export function getCustomVoiceId(): string | null {
 export interface SpeakOptions {
   /** Storytelling delivery: livelier, more expressive pacing. */
   story?: boolean;
+  /** Long-form reading (Bible chapters): fast engine, quick start. */
+  read?: boolean;
 }
 
 /**
@@ -110,6 +112,7 @@ export async function synthesize(
       token: BACKEND_TOKEN!,
       text,
       ...(options.story ? { story: '1' } : {}),
+      ...(options.read ? { read: '1' } : {}),
       ...(customVoiceId ? { voice: customVoiceId } : {}),
     });
     return `${BACKEND_URL}/tts?${params.toString()}`;
@@ -159,7 +162,9 @@ export async function synthesize(
       );
     };
 
-    const models: ElevenModel[] = ['eleven_v3', 'eleven_multilingual_v2'];
+    const models: ElevenModel[] = options.read
+      ? ['eleven_turbo_v2_5', 'eleven_multilingual_v2']
+      : ['eleven_v3', 'eleven_multilingual_v2'];
     const candidates = [
       ...(customVoiceId ? [customVoiceId] : []),
       ELEVEN_VOICE_ID,

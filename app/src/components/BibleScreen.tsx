@@ -85,7 +85,7 @@ export default function BibleScreen({ visible, onClose }: Props) {
     readingRef.current = true;
     setReading(true);
 
-    let upcoming = voice.synthesize(chunks[0]);
+    let upcoming = voice.synthesize(chunks[0], { read: true });
     const playFrom = async (i: number) => {
       const uri = await upcoming;
       if (!readingRef.current) return;
@@ -98,7 +98,8 @@ export default function BibleScreen({ visible, onClose }: Props) {
         );
         return;
       }
-      if (i + 1 < chunks.length) upcoming = voice.synthesize(chunks[i + 1]);
+      if (i + 1 < chunks.length)
+        upcoming = voice.synthesize(chunks[i + 1], { read: true });
       voice.playUri(uri, () => {
         if (!readingRef.current) return;
         if (i + 1 < chunks.length) {
