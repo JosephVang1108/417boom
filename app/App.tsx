@@ -180,60 +180,56 @@ export default function App() {
     setPraying(false);
   };
 
-  // Tap the mic, speak, tap again — your words become the message.
-  const toggleMic = async () => {
+  // Hold the mic, speak, release — like a walkie-talkie.
+  const startTalking = async () => {
     markActive();
-    if (transcribing) return;
+    if (recording || transcribing) return;
     if (!voiceReady) {
       Alert.alert(
-        'Voice input needs ElevenLabs',
-        'Add your ElevenLabs API key in settings (⚙️) to talk to him with your voice.'
+        'Voice not connected',
+        'Voice input isn’t available right now. Check your connection, or add an ElevenLabs key in ⚙️ settings.'
       );
       return;
     }
-    if (!recording) {
-      const perm = await AudioModule.requestRecordingPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert('Microphone needed', 'Allow microphone access to speak.');
-        return;
+    const perm = await AudioModule.requestRecordingPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Microphone needed', 'Allow microphone access to speak.');
+      return;
+    }
+    voice.stop();
+    setSpeaking(false);
+    await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
+    await recorder.prepareToRecordAsync();
+    recorder.record();
+    setRecording(true);
+    setListening(true);
+  };
+
+  const stopTalking = async () => {
+    if (!recording) return;
+    setRecording(false);
+    setTranscribing(true);
+    try {
+      await recorder.stop();
+      // Restore the playback route so replies come out of the speaker.
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
+      const uri = recorder.uri;
+      const result = uri
+        ? await voice.transcribe(uri)
+        : { text: null as string | null };
+      if (result.text) {
+        await send(result.text);
+      } else if (result.problem === 'network') {
+        Alert.alert('No connection', 'Please check your internet and try again.');
+      } else {
+        Alert.alert(
+          "I couldn't hear that",
+          'Hold the mic while you speak, and release when you’re done.'
+        );
       }
-      voice.stop();
-      setSpeaking(false);
-      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-      setRecording(true);
-      setListening(true);
-    } else {
-      setRecording(false);
-      setTranscribing(true);
-      try {
-        await recorder.stop();
-        // Restore the playback route so replies come out of the speaker.
-        await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
-        const uri = recorder.uri;
-        const result = uri
-          ? await voice.transcribe(uri)
-          : { text: null as string | null };
-        if (result.text) {
-          await send(result.text);
-        } else if (result.problem === 'permission') {
-          Alert.alert(
-            'Key needs Speech to Text',
-            'Your ElevenLabs API key doesn’t allow Speech to Text. In ElevenLabs, create a key with both "Text to Speech" and "Speech to Text" enabled, then save it in ⚙️ settings.'
-          );
-        } else if (result.problem === 'network') {
-          Alert.alert('No connection', 'Please check your internet and try again.');
-        } else {
-          Alert.alert(
-            "I couldn't hear that",
-            'Please try speaking again, a little closer to the phone.'
-          );
-        }
-      } finally {
-        setTranscribing(false);
-        setListening(false);
-      }
+    } finally {
+      setTranscribing(false);
+      setListening(false);
     }
   };
 
@@ -385,14 +381,15 @@ export default function App() {
 
           <View style={styles.inputBar}>
             <Pressable
-              onPress={toggleMic}
+              onPressIn={startTalking}
+              onPressOut={stopTalking}
               style={({ pressed }) => [
                 styles.micButton,
                 recording && styles.micRecording,
                 pressed && styles.sendPressed,
               ]}
             >
-              <Text style={styles.micText}>{recording ? '■' : '🎤'}</Text>
+              <Text style={styles.micText}>🎤</Text>
             </Pressable>
             <TextInput
               style={styles.input}
@@ -403,10 +400,10 @@ export default function App() {
               onSubmitEditing={() => send()}
               placeholder={
                 recording
-                  ? 'Listening… tap ■ when done'
+                  ? 'Listening… release to send'
                   : transcribing
                     ? 'Understanding…'
-                    : 'Speak what is on your heart…'
+                    : 'Hold 🎤 to talk, or type…'
               }
               placeholderTextColor={recording ? '#C8A45C' : '#7A7A72'}
               returnKeyType="send"

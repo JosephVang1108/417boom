@@ -120,7 +120,12 @@ app.get('/tts', async (req, res) => {
 
   try {
     const voices = [String(req.query.voice || VOICE_ID), FALLBACK_VOICE_ID];
-    const models = ['eleven_v3', 'eleven_multilingual_v2'];
+    // Bible reading (read=1) uses fast Turbo — near-instant start and
+    // far cheaper for long passages; conversation keeps expressive v3.
+    const models =
+      req.query.read === '1'
+        ? ['eleven_turbo_v2_5', 'eleven_multilingual_v2']
+        : ['eleven_v3', 'eleven_multilingual_v2'];
     let upstream = null;
     outer: for (const v of voices) {
       for (const m of models) {
