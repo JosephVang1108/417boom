@@ -30,7 +30,7 @@ import {
   resetConversation,
   setApiKey,
 } from './src/lib/ai';
-import { respond, spokenText, GuideResponse } from './src/lib/guide';
+import { displayText, respond, spokenText, GuideResponse } from './src/lib/guide';
 import * as profile from './src/lib/profile';
 import * as voice from './src/lib/voice';
 
@@ -277,7 +277,7 @@ export default function App() {
                       latest?.id === ex.id && styles.replyCardLatest,
                     ]}
                   >
-                    <Text style={styles.replyIntro}>{ex.response.intro}</Text>
+                    <Text style={styles.replyIntro}>{displayText(ex.response.intro)}</Text>
                     {ex.response.verse && (
                       <>
                         <Text style={styles.verseText}>“{ex.response.verse.text}”</Text>

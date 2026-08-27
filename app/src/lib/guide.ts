@@ -140,5 +140,13 @@ export function speakableRef(ref: string): string {
 export function spokenText(response: GuideResponse): string {
   // A prayer is spoken as-is; the verse (if any) stays on screen only.
   if (response.isPrayer || !response.verse) return response.intro;
-  return `${response.intro} As it is written in ${speakableRef(response.verse.ref)}: ${response.verse.text}`;
+  return `${response.intro} … As it is written in ${speakableRef(response.verse.ref)}: … ${response.verse.text}`;
+}
+
+/** Reply text for the screen — audio tags like [gentle sigh] are heard, not read. */
+export function displayText(intro: string): string {
+  return intro
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }

@@ -11,7 +11,11 @@ const VOICE_ID_STORAGE = 'elevenlabs_voice_id';
 // for accounts that don't have it.
 const ELEVEN_VOICE_ID = 'pdNm5Q6lQvK6VrviGGq1';
 const ELEVEN_FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb';
-const ELEVEN_MODEL = 'eleven_multilingual_v2';
+
+// Prefer the expressive v3 model — it performs pauses, breaths, and
+// audio tags like [gentle sigh]. Fall back to multilingual v2 for
+// accounts/voices where v3 isn't available.
+const ELEVEN_MODELS = ['eleven_v3', 'eleven_multilingual_v2'] as const;
 
 let elevenKey: string | null = null;
 let customVoiceId: string | null = null;
@@ -115,8 +119,20 @@ async function speakEleven(
     audioModeReady = true;
   }
 
-  const request = (voiceId: string) =>
-    fetch(
+  const request = (voiceId: string, model: (typeof ELEVEN_MODELS)[number]) => {
+    // v3 is expressive on its own and rejects some v2 settings —
+    // keep its config minimal; v2 gets the tuned settings.
+    const voice_settings =
+      model === 'eleven_v3'
+        ? { stability: 0.5, use_speaker_boost: true }
+        : {
+            stability: 0.65,
+            similarity_boost: 0.85,
+            style: 0.1,
+            use_speaker_boost: true,
+            speed: 0.95,
+          };
+    return fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
       {
         method: 'POST',
@@ -124,31 +140,25 @@ async function speakEleven(
           'xi-api-key': elevenKey!,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          text,
-          model_id: ELEVEN_MODEL,
-          voice_settings: {
-            stability: 0.65, // measured but not sluggish
-            similarity_boost: 0.85,
-            style: 0.1,
-            use_speaker_boost: true,
-            speed: 0.95, // natural pace, just a touch unhurried
-          },
-        }),
+        body: JSON.stringify({ text, model_id: model, voice_settings }),
       }
     );
+  };
 
-  // Order: the user's own chosen/designed voice, then the library
-  // Jesus voice, then Brian — first one this account can use wins.
+  // Order: the user's own chosen/designed voice, then the designed
+  // default, then Brian — expressive v3 first, then v2 — first
+  // combination this account can use wins.
   const candidates = [
     ...(customVoiceId ? [customVoiceId] : []),
     ELEVEN_VOICE_ID,
     ELEVEN_FALLBACK_VOICE_ID,
   ];
   let res: Response | null = null;
-  for (const voiceId of candidates) {
-    res = await request(voiceId);
-    if (res.ok || res.status < 400 || res.status >= 500) break;
+  outer: for (const voiceId of candidates) {
+    for (const model of ELEVEN_MODELS) {
+      res = await request(voiceId, model);
+      if (res.ok || res.status >= 500) break outer;
+    }
   }
   if (!res || !res.ok) throw new Error(`ElevenLabs ${res?.status ?? 'error'}`);
 
