@@ -1,4 +1,4 @@
-import { useEvent } from 'expo';
+import { useEvent, useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import React, {
   forwardRef,
@@ -52,8 +52,9 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
   const useVideo = !!PORTRAIT_VIDEO_URL && !videoFailed;
 
   const player = useVideoPlayer(useVideo ? PORTRAIT_VIDEO_URL : null, (p) => {
-    p.loop = true;
+    p.loop = false; // we run our own natural loop with crossfades
     p.muted = true;
+    p.timeUpdateEventInterval = 0.25;
     p.play();
   });
   const { status } = useEvent(player, 'statusChange', {
@@ -62,6 +63,58 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
   useEffect(() => {
     if (status === 'error') setVideoFailed(true);
   }, [status]);
+
+  // Natural, seamless looping: the clip's first frame IS the still
+  // portrait, so near the end we cross-dissolve to the still (which
+  // keeps breathing), hold for a random calm pause, then dissolve back
+  // and replay. No visible jump cut, and the random holds keep it from
+  // feeling like a repeating GIF.
+  const stillOpacity = useRef(new Animated.Value(1)).current; // show still until video is ready
+  const cycleBusy = useRef(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (status === 'readyToPlay' && !cycleBusy.current) {
+      Animated.timing(stillOpacity, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [status, stillOpacity]);
+
+  useEventListener(player, 'timeUpdate', ({ currentTime }) => {
+    const duration = player.duration;
+    if (!duration || cycleBusy.current) return;
+    if (currentTime > duration - 0.75) {
+      cycleBusy.current = true;
+      Animated.timing(stillOpacity, {
+        toValue: 1,
+        duration: 550,
+        useNativeDriver: true,
+      }).start(() => {
+        player.pause();
+        player.currentTime = 0;
+        const hold = 1500 + Math.random() * 3000;
+        holdTimer.current = setTimeout(() => {
+          player.play();
+          Animated.timing(stillOpacity, {
+            toValue: 0,
+            duration: 550,
+            useNativeDriver: true,
+          }).start(() => {
+            cycleBusy.current = false;
+          });
+        }, hold);
+      });
+    }
+  });
+
+  useEffect(() => {
+    return () => {
+      if (holdTimer.current) clearTimeout(holdTimer.current);
+    };
+  }, []);
 
   const gazeX = useRef(new Animated.Value(0)).current;
   const gazeY = useRef(new Animated.Value(0)).current;
@@ -110,10 +163,9 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
     },
   }));
 
-  // Code-driven breathing for the still-image fallback only —
-  // the video breathes on its own.
+  // Code-driven breathing for the still image (the fallback, and the
+  // crossfade hold layer — the video itself breathes on its own).
   useEffect(() => {
-    if (useVideo) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(breath, {
@@ -132,7 +184,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
     );
     loop.start();
     return () => loop.stop();
-  }, [breath, useVideo]);
+  }, [breath]);
 
   // Heavenly glow: soft pulse normally, brighter and faster while speaking.
   useEffect(() => {
@@ -190,31 +242,39 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
         style={[
           StyleSheet.absoluteFill,
           {
-            transform: useVideo
-              ? [{ translateX: leanX }, { translateY: leanY }, { scale: 1.03 }]
-              : [
-                  { translateX: leanX },
-                  { translateY: leanY },
-                  { scale: breathScale },
-                ],
+            // Slight overscan so the lean never reveals the black edge.
+            transform: [
+              { translateX: leanX },
+              { translateY: leanY },
+              { scale: 1.03 },
+            ],
           },
         ]}
       >
-        {useVideo ? (
+        {useVideo && (
           <VideoView
             player={player}
             style={styles.portrait}
             contentFit="cover"
             nativeControls={false}
           />
-        ) : (
+        )}
+        {/* Still portrait: fallback when there's no video, and the
+            breathing crossfade layer during the loop's calm holds. */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            useVideo && { opacity: stillOpacity },
+            { transform: [{ scale: breathScale }] },
+          ]}
+        >
           <Image
             source={{ uri: PORTRAIT_URL }}
             style={styles.portrait}
             resizeMode="cover"
             onError={() => setImageFailed(true)}
           />
-        )}
+        </Animated.View>
       </Animated.View>
 
       {/* Heavenly glow above the face, pulsing */}
