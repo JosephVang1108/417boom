@@ -1,5 +1,4 @@
 import { StatusBar } from 'expo-status-bar';
-import * as Speech from 'expo-speech';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -25,6 +24,7 @@ import {
   setApiKey,
 } from './src/lib/ai';
 import { respond, spokenText, GuideResponse } from './src/lib/guide';
+import * as voice from './src/lib/voice';
 
 interface Exchange {
   id: number;
@@ -46,10 +46,12 @@ export default function App() {
   const [listening, setListening] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [aiReady, setAiReady] = useState(false);
+  const [voiceReady, setVoiceReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     loadStoredKey().then(setAiReady);
+    voice.loadVoiceKey().then(setVoiceReady);
   }, []);
 
   // Dragging a finger over the face leans him toward it.
@@ -68,19 +70,12 @@ export default function App() {
   };
 
   const speak = (response: GuideResponse) => {
-    Speech.stop();
     setSpeaking(true);
-    Speech.speak(spokenText(response), {
-      rate: 0.92,
-      pitch: 0.9,
-      onDone: () => setSpeaking(false),
-      onStopped: () => setSpeaking(false),
-      onError: () => setSpeaking(false),
-    });
+    voice.speak(spokenText(response), () => setSpeaking(false));
   };
 
   const stopSpeaking = () => {
-    Speech.stop();
+    voice.stop();
     setSpeaking(false);
   };
 
@@ -236,9 +231,16 @@ export default function App() {
 
           <SettingsModal
             visible={settingsOpen}
-            hasKey={aiReady}
-            onSave={saveKey}
-            onClear={clearKey}
+            hasAiKey={aiReady}
+            hasVoiceKey={voiceReady}
+            onSaveAiKey={saveKey}
+            onClearAiKey={clearKey}
+            onSaveVoiceKey={(key) => {
+              voice.setVoiceKey(key).then(() => setVoiceReady(voice.hasVoiceKey()));
+            }}
+            onClearVoiceKey={() => {
+              voice.setVoiceKey('').then(() => setVoiceReady(false));
+            }}
             onClose={() => setSettingsOpen(false)}
           />
         </KeyboardAvoidingView>

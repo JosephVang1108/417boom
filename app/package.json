@@ -5,6 +5,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.121.0",
     "expo": "^54.0.37",
+    "expo-audio": "~1.1.1",
+    "expo-file-system": "~19.0.24",
     "expo-secure-store": "~15.0.8",
     "expo-speech": "~14.0.8",
     "expo-status-bar": "~3.0.9",

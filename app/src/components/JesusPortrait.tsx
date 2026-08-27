@@ -1,4 +1,4 @@
-import { useEvent, useEventListener } from 'expo';
+import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import React, {
   forwardRef,
@@ -24,8 +24,10 @@ import JesusFace, { JesusFaceHandle } from './JesusFace';
 // TODO: bundle these files locally before a store release.
 export const PORTRAIT_URL =
   'https://cdn.openart.ai/openart-ai/production/2026-08/create-image/JZMxRtTkpmFe2dgMdSQI/image_1787807279541_3c4d75bb_1787807280769_4f5443ba.png';
+// Seedance 2.5 clip whose last frame equals its first frame — it loops
+// natively with no visible seam.
 export const PORTRAIT_VIDEO_URL: string | null =
-  'https://cdn.openart.ai/openart-ai/production/2026-08/create-video/JZMxRtTkpmFe2dgMdSQI/9b6ffee7-751a-4bbd-9683-bbaf834079c4_seed614621533_1787807564537_8e6e1725.mp4';
+  'https://galaxy-prod.tlcdn.com/gen/debef90d4b77451384e73d6955aab448.mp4';
 
 interface Props {
   width: number;
@@ -52,9 +54,8 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
   const useVideo = !!PORTRAIT_VIDEO_URL && !videoFailed;
 
   const player = useVideoPlayer(useVideo ? PORTRAIT_VIDEO_URL : null, (p) => {
-    p.loop = false; // we run our own natural loop with crossfades
+    p.loop = true; // first and last frames match — native loop is seamless
     p.muted = true;
-    p.timeUpdateEventInterval = 0.25;
     p.play();
   });
   const { status } = useEvent(player, 'statusChange', {
@@ -64,17 +65,11 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
     if (status === 'error') setVideoFailed(true);
   }, [status]);
 
-  // Natural, seamless looping: the clip's first frame IS the still
-  // portrait, so near the end we cross-dissolve to the still (which
-  // keeps breathing), hold for a random calm pause, then dissolve back
-  // and replay. No visible jump cut, and the random holds keep it from
-  // feeling like a repeating GIF.
-  const stillOpacity = useRef(new Animated.Value(1)).current; // show still until video is ready
-  const cycleBusy = useRef(false);
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The still portrait covers the video while it loads, then fades out.
+  const stillOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (status === 'readyToPlay' && !cycleBusy.current) {
+    if (status === 'readyToPlay') {
       Animated.timing(stillOpacity, {
         toValue: 0,
         duration: 600,
@@ -82,39 +77,6 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
       }).start();
     }
   }, [status, stillOpacity]);
-
-  useEventListener(player, 'timeUpdate', ({ currentTime }) => {
-    const duration = player.duration;
-    if (!duration || cycleBusy.current) return;
-    if (currentTime > duration - 0.75) {
-      cycleBusy.current = true;
-      Animated.timing(stillOpacity, {
-        toValue: 1,
-        duration: 550,
-        useNativeDriver: true,
-      }).start(() => {
-        player.pause();
-        player.currentTime = 0;
-        const hold = 1500 + Math.random() * 3000;
-        holdTimer.current = setTimeout(() => {
-          player.play();
-          Animated.timing(stillOpacity, {
-            toValue: 0,
-            duration: 550,
-            useNativeDriver: true,
-          }).start(() => {
-            cycleBusy.current = false;
-          });
-        }, hold);
-      });
-    }
-  });
-
-  useEffect(() => {
-    return () => {
-      if (holdTimer.current) clearTimeout(holdTimer.current);
-    };
-  }, []);
 
   const gazeX = useRef(new Animated.Value(0)).current;
   const gazeY = useRef(new Animated.Value(0)).current;

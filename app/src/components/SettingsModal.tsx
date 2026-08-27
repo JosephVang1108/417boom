@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,19 +11,36 @@ import {
 
 interface Props {
   visible: boolean;
-  hasKey: boolean;
-  onSave: (key: string) => void;
-  onClear: () => void;
+  hasAiKey: boolean;
+  hasVoiceKey: boolean;
+  onSaveAiKey: (key: string) => void;
+  onClearAiKey: () => void;
+  onSaveVoiceKey: (key: string) => void;
+  onClearVoiceKey: () => void;
   onClose: () => void;
 }
 
-export default function SettingsModal({ visible, hasKey, onSave, onClear, onClose }: Props) {
-  const [draft, setDraft] = useState('');
+export default function SettingsModal({
+  visible,
+  hasAiKey,
+  hasVoiceKey,
+  onSaveAiKey,
+  onClearAiKey,
+  onSaveVoiceKey,
+  onClearVoiceKey,
+  onClose,
+}: Props) {
+  const [aiDraft, setAiDraft] = useState('');
+  const [voiceDraft, setVoiceDraft] = useState('');
 
   const save = () => {
-    if (draft.trim()) {
-      onSave(draft.trim());
-      setDraft('');
+    if (aiDraft.trim()) {
+      onSaveAiKey(aiDraft.trim());
+      setAiDraft('');
+    }
+    if (voiceDraft.trim()) {
+      onSaveVoiceKey(voiceDraft.trim());
+      setVoiceDraft('');
     }
     onClose();
   };
@@ -31,41 +49,69 @@ export default function SettingsModal({ visible, hasKey, onSave, onClear, onClos
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>AI Conversations</Text>
-          <Text style={styles.body}>
-            With an Anthropic API key, responses are powered by Claude and truly
-            understand what you share. Without one, the app uses its built-in
-            verse library.
-          </Text>
-          <Text style={styles.status}>
-            {hasKey ? '✓ AI is active' : 'No API key set — offline mode'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="sk-ant-…"
-            placeholderTextColor="#8B93A8"
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry
-          />
-          <Text style={styles.note}>
-            The key is stored securely on this device only.
-          </Text>
-          <View style={styles.row}>
-            {hasKey && (
-              <Pressable style={[styles.button, styles.buttonGhost]} onPress={() => { onClear(); onClose(); }}>
-                <Text style={styles.buttonGhostText}>Remove key</Text>
+          <ScrollView>
+            <Text style={styles.title}>Settings</Text>
+
+            <Text style={styles.section}>AI Conversations — Claude</Text>
+            <Text style={styles.body}>
+              With an Anthropic API key, responses truly understand what you
+              share. Without one, the built-in verse library answers.
+            </Text>
+            <Text style={styles.status}>
+              {hasAiKey ? '✓ AI is active' : 'Not set — offline verses'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={aiDraft}
+              onChangeText={setAiDraft}
+              placeholder="sk-ant-…"
+              placeholderTextColor="#6E6E66"
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry
+            />
+            {hasAiKey && (
+              <Pressable onPress={onClearAiKey}>
+                <Text style={styles.removeLink}>Remove Claude key</Text>
               </Pressable>
             )}
-            <Pressable style={[styles.button, styles.buttonGhost]} onPress={onClose}>
-              <Text style={styles.buttonGhostText}>Close</Text>
-            </Pressable>
-            <Pressable style={styles.button} onPress={save}>
-              <Text style={styles.buttonText}>Save</Text>
-            </Pressable>
-          </View>
+
+            <Text style={styles.section}>Voice — ElevenLabs</Text>
+            <Text style={styles.body}>
+              With an ElevenLabs API key, he speaks in a warm, natural,
+              soothing voice. Without one, the phone's built-in voice is used.
+            </Text>
+            <Text style={styles.status}>
+              {hasVoiceKey ? '✓ Natural voice active' : 'Not set — device voice'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={voiceDraft}
+              onChangeText={setVoiceDraft}
+              placeholder="ElevenLabs API key…"
+              placeholderTextColor="#6E6E66"
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry
+            />
+            {hasVoiceKey && (
+              <Pressable onPress={onClearVoiceKey}>
+                <Text style={styles.removeLink}>Remove voice key</Text>
+              </Pressable>
+            )}
+
+            <Text style={styles.note}>
+              Keys are stored securely on this device only.
+            </Text>
+            <View style={styles.row}>
+              <Pressable style={[styles.button, styles.buttonGhost]} onPress={onClose}>
+                <Text style={styles.buttonGhostText}>Close</Text>
+              </Pressable>
+              <Pressable style={styles.button} onPress={save}>
+                <Text style={styles.buttonText}>Save</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -75,49 +121,63 @@ export default function SettingsModal({ visible, hasKey, onSave, onClear, onClos
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(8, 11, 20, 0.75)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     padding: 24,
   },
   card: {
-    backgroundColor: '#1D2740',
+    backgroundColor: '#121212',
     borderRadius: 18,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#2A3552',
+    borderColor: 'rgba(255,255,255,0.14)',
+    maxHeight: '85%',
   },
   title: {
     color: '#F0E6CE',
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 10,
+    marginBottom: 6,
+  },
+  section: {
+    color: '#C8A45C',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 14,
+    marginBottom: 6,
   },
   body: {
-    color: '#C9D2E8',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 10,
+    color: '#C9C9C2',
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 8,
   },
   status: {
-    color: '#B9964E',
-    fontSize: 13,
+    color: '#C8A45C',
+    fontSize: 12,
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: '#141B2E',
-    color: '#EDF0F8',
+    backgroundColor: '#0A0A0A',
+    color: '#EDEDE8',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#2A3552',
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  removeLink: {
+    color: '#9A9A92',
+    fontSize: 12,
+    marginTop: 6,
+    textDecorationLine: 'underline',
   },
   note: {
-    color: '#8B93A8',
+    color: '#7A7A72',
     fontSize: 12,
-    marginTop: 8,
+    marginTop: 14,
     marginBottom: 16,
   },
   row: {
@@ -132,17 +192,17 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   buttonText: {
-    color: '#10162A',
+    color: '#0A0A0A',
     fontWeight: '700',
     fontSize: 14,
   },
   buttonGhost: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#2A3552',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   buttonGhostText: {
-    color: '#C9D2E8',
+    color: '#C9C9C2',
     fontSize: 14,
   },
 });

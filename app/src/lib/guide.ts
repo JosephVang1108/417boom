@@ -64,7 +64,22 @@ export function respond(input: string): GuideResponse {
   return { topicId: best.id, intro, verse };
 }
 
+/**
+ * Make a verse reference read naturally aloud:
+ * "Psalm 46:10"      -> "Psalm 46, verse 10"
+ * "Philippians 4:6–7" -> "Philippians 4, verses 6 through 7"
+ * "1 John 1:9"        -> "First John 1, verse 9"
+ */
+export function speakableRef(ref: string): string {
+  return ref
+    .replace(/^1\s/, 'First ')
+    .replace(/^2\s/, 'Second ')
+    .replace(/^3\s/, 'Third ')
+    .replace(/(\d+):(\d+)\s*[–-]\s*(\d+)/g, '$1, verses $2 through $3')
+    .replace(/(\d+):(\d+)/g, '$1, verse $2');
+}
+
 /** The line spoken aloud by text-to-speech. */
 export function spokenText(response: GuideResponse): string {
-  return `${response.intro} As it is written in ${response.verse.ref}: ${response.verse.text}`;
+  return `${response.intro} As it is written in ${speakableRef(response.verse.ref)}: ${response.verse.text}`;
 }
