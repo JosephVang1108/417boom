@@ -21,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import { JesusFaceHandle } from './src/components/JesusFace';
+import BibleScreen from './src/components/BibleScreen';
 import JesusPortrait from './src/components/JesusPortrait';
 import OnboardingModal from './src/components/OnboardingModal';
 import SettingsModal from './src/components/SettingsModal';
@@ -31,7 +32,13 @@ import {
   resetConversation,
   setApiKey,
 } from './src/lib/ai';
-import { displayText, respond, spokenText, GuideResponse } from './src/lib/guide';
+import {
+  displayText,
+  encouragement,
+  respond,
+  spokenText,
+  GuideResponse,
+} from './src/lib/guide';
 import * as profile from './src/lib/profile';
 import * as voice from './src/lib/voice';
 
@@ -63,8 +70,49 @@ export default function App() {
   const [userName, setUserName] = useState('');
   const [voiceId, setVoiceId] = useState('');
   const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const [bibleOpen, setBibleOpen] = useState(false);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+
+  // ---- Idle encouragement: after a quiet stretch with the app open,
+  // he says something kind, unprompted. Grows less frequent over time.
+  const lastActivity = useRef(Date.now());
+  const idleWait = useRef(120_000 + Math.random() * 60_000);
+  const idleState = useRef({ blocked: true, voiceOn: true });
+  idleState.current = {
+    blocked:
+      speaking ||
+      recording ||
+      transcribing ||
+      settingsOpen ||
+      bibleOpen ||
+      onboardingVisible ||
+      history.length === 0,
+    voiceOn,
+  };
+  const markActive = () => {
+    lastActivity.current = Date.now();
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const { blocked, voiceOn: speakIt } = idleState.current;
+      if (blocked) return;
+      if (Date.now() - lastActivity.current < idleWait.current) return;
+      const gentle: GuideResponse = {
+        topicId: 'idle',
+        intro: encouragement(),
+        verse: null,
+      };
+      setHistory((h) => [...h, { id: nextId.current++, question: '', response: gentle }]);
+      if (speakIt) speak(gentle);
+      markActive();
+      // Back off so it stays precious: 2min -> ~3.5min -> ~6min -> 10min cap.
+      idleWait.current = Math.min(idleWait.current * 1.7, 600_000);
+    }, 15_000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     loadStoredKey().then(setAiReady);
@@ -105,6 +153,7 @@ export default function App() {
   ).current;
 
   const track = (x: number, y: number) => {
+    markActive();
     const { w, h } = touchZone.current;
     faceRef.current?.lookToward((x - w / 2) / (w / 2), (y - h / 2) / (h / 2));
   };
@@ -113,10 +162,14 @@ export default function App() {
     setSpeaking(true);
     // During a prayer, he closes his eyes and bows his head.
     if (response.isPrayer) setPraying(true);
-    voice.speak(spokenText(response), () => {
-      setSpeaking(false);
-      setPraying(false);
-    });
+    voice.speak(
+      spokenText(response),
+      () => {
+        setSpeaking(false);
+        setPraying(false);
+      },
+      { story: response.isStory }
+    );
   };
 
   const stopSpeaking = () => {
@@ -127,6 +180,7 @@ export default function App() {
 
   // Tap the mic, speak, tap again — your words become the message.
   const toggleMic = async () => {
+    markActive();
     if (transcribing) return;
     if (!voiceReady) {
       Alert.alert(
@@ -182,6 +236,7 @@ export default function App() {
   };
 
   const send = async (spokenQuestion?: string) => {
+    markActive();
     const question = (spokenQuestion ?? input).trim();
     if (!question) return;
     const id = nextId.current++;
@@ -247,6 +302,15 @@ export default function App() {
               {aiReady && <Text style={styles.aiBadge}>AI</Text>}
             </View>
             <View style={styles.headerActions}>
+              <Pressable
+                onPress={() => {
+                  markActive();
+                  setBibleOpen(true);
+                }}
+                hitSlop={12}
+              >
+                <Text style={styles.voiceToggle}>📖</Text>
+              </Pressable>
               <Pressable onPress={toggleVoice} hitSlop={12}>
                 <Text style={styles.voiceToggle}>{voiceOn ? '🔊' : '🔇'}</Text>
               </Pressable>
@@ -387,6 +451,14 @@ export default function App() {
           <OnboardingModal
             visible={onboardingVisible}
             onComplete={completeOnboarding}
+          />
+
+          <BibleScreen
+            visible={bibleOpen}
+            onClose={() => {
+              markActive();
+              setBibleOpen(false);
+            }}
           />
         </KeyboardAvoidingView>
       </SafeAreaView>

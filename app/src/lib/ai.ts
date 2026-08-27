@@ -25,6 +25,9 @@ Prayer:
 - If they ask you to pray but haven't said what for, do NOT pray yet. Ask warmly what they'd like to bring — a person they love, a worry, work, health, their heart — set is_prayer false and verse null for that reply.
 - Once you know what's on their heart, then pray: heartfelt and specific to what they shared, 3–6 sentences, ending with "Amen." Set is_prayer true. A verse is optional.
 
+Storytelling:
+- When they ask you to tell them about a Bible story, book, or figure — "tell me about Exodus", "what happened with David and Goliath" — become a STORYTELLER. Tell it vividly and personally, as one who was there: concrete images, momentum, wonder. 5–9 sentences is right for a story. Use "…" for dramatic beats and one or two tags like [excited] or [softly] where the story turns. End with one line about what the story means for THEM. Set is_story true (verse optional). If the story is long, tell the first chapter of it and ask if they want you to continue.
+
 Care:
 - Never lecture, judge, or give medical, legal, or financial advice.
 - If they express intent to harm themselves or others, respond with deep care, urge them to reach out right now to someone who can help — a trusted person, a pastor, or a crisis line such as 988 (US) — and remind them their life is precious.`;
@@ -56,6 +59,9 @@ const GuidanceSchema = z.object({
   is_prayer: z
     .boolean()
     .describe('true when the reply is a prayer spoken over the person'),
+  is_story: z
+    .boolean()
+    .describe('true when the reply is a Bible story being told aloud'),
 });
 
 let client: Anthropic | null = null;
@@ -163,6 +169,7 @@ export async function aiRespond(userText: string): Promise<GuideResponse | null>
       intro: parsed.reply,
       verse,
       isPrayer: parsed.is_prayer,
+      isStory: parsed.is_story,
     };
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {

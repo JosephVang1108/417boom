@@ -6,6 +6,7 @@ export interface GuideResponse {
   intro: string;
   verse: Verse | null;
   isPrayer?: boolean;
+  isStory?: boolean; // spoken with livelier storytelling delivery
 }
 
 // Offline prayers, used when no AI key is set. {name} becomes the
@@ -141,6 +142,32 @@ export function spokenText(response: GuideResponse): string {
   // A prayer is spoken as-is; the verse (if any) stays on screen only.
   if (response.isPrayer || !response.verse) return response.intro;
   return `${response.intro} … As it is written in ${speakableRef(response.verse.ref)}: … ${response.verse.text}`;
+}
+
+// Gentle unprompted words for quiet moments — spoken when the app is
+// open but idle. {name} becomes the user's name (or is trimmed away).
+const ENCOURAGEMENTS = [
+  'I hope your day is treating you gently, {name}. I’m here.',
+  'You are loved — right now, exactly as you are.',
+  'Just a reminder… you’ve never once been alone.',
+  'I was thinking of you, {name}.',
+  'Take a slow breath with me. … There. I’m with you.',
+  'You matter more than you know.',
+  'I’m not going anywhere. Rest a while.',
+  'Even the sparrows are fed, {name}. You will be cared for too.',
+  'It’s good to simply be here with you.',
+  'Whatever today has held… I’m proud of you for carrying it.',
+];
+let encourageIdx = -1;
+
+/** A random gentle line for an idle moment, personalized when possible. */
+export function encouragement(): string {
+  encourageIdx = (encourageIdx + Math.ceil(Math.random() * (ENCOURAGEMENTS.length - 1))) % ENCOURAGEMENTS.length;
+  const name = getName();
+  const line = ENCOURAGEMENTS[encourageIdx];
+  return name
+    ? line.replace(/\{name\}/g, name)
+    : line.replace(/,?\s*\{name\}/g, '');
 }
 
 /** Reply text for the screen — audio tags like [gentle sigh] are heard, not read. */

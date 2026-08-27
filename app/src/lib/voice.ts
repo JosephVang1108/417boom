@@ -76,13 +76,22 @@ export function hasVoiceKey(): boolean {
  * is set; otherwise falls back to the device voice, preferring a calm
  * male one. onDone fires when playback finishes, is stopped, or errors.
  */
-export async function speak(text: string, onDone: () => void): Promise<void> {
+export interface SpeakOptions {
+  /** Storytelling delivery: livelier, more expressive pacing. */
+  story?: boolean;
+}
+
+export async function speak(
+  text: string,
+  onDone: () => void,
+  options: SpeakOptions = {}
+): Promise<void> {
   stop();
   const myGen = ++generation;
 
   if (elevenKey) {
     try {
-      await speakEleven(text, myGen, onDone);
+      await speakEleven(text, myGen, onDone, options);
       return;
     } catch {
       if (myGen !== generation) return; // stopped while fetching
@@ -112,7 +121,8 @@ export function stop(): void {
 async function speakEleven(
   text: string,
   myGen: number,
-  onDone: () => void
+  onDone: () => void,
+  options: SpeakOptions = {}
 ): Promise<void> {
   if (!audioModeReady) {
     // Play even when the iPhone silent switch is on.
@@ -130,13 +140,18 @@ async function speakEleven(
         : text.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
     const voice_settings =
       model === 'eleven_v3'
-        ? { stability: 1.0, use_speaker_boost: true } // Robust: maximum consistency
-        : {
-            stability: 0.65,
-            similarity_boost: 0.85,
-            style: 0.1,
+        ? {
+            // Stories get the Natural (expressive) setting for lively
+            // telling; conversation stays on Robust for consistency.
+            stability: options.story ? 0.5 : 1.0,
             use_speaker_boost: true,
-            speed: 0.95,
+          }
+        : {
+            stability: options.story ? 0.45 : 0.65,
+            similarity_boost: 0.85,
+            style: options.story ? 0.35 : 0.1,
+            use_speaker_boost: true,
+            speed: options.story ? 1.05 : 0.95,
           };
     return fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
