@@ -15,6 +15,7 @@ interface Props {
   voiceId: string;
   hasAiKey: boolean;
   hasVoiceKey: boolean;
+  backendMode: boolean;
   onSaveName: (name: string) => void;
   onSaveVoiceId: (id: string) => void;
   onSaveAiKey: (key: string) => void;
@@ -31,6 +32,7 @@ export default function SettingsModal({
   voiceId,
   hasAiKey,
   hasVoiceKey,
+  backendMode,
   onSaveName,
   onSaveVoiceId,
   onSaveAiKey,
@@ -91,6 +93,17 @@ export default function SettingsModal({
               autoCorrect={false}
             />
 
+            {backendMode && (
+              <>
+                <Text style={styles.section}>Abide service</Text>
+                <Text style={styles.status}>
+                  ✓ Connected — conversations and voice are ready
+                </Text>
+              </>
+            )}
+
+            {!backendMode && (
+              <>
             <Text style={styles.section}>AI Conversations — Claude</Text>
             <Text style={styles.body}>
               With an Anthropic API key, responses truly understand what you
@@ -137,6 +150,8 @@ export default function SettingsModal({
               <Pressable onPress={onClearVoiceKey}>
                 <Text style={styles.removeLink}>Remove voice key</Text>
               </Pressable>
+            )}
+              </>
             )}
 
             <Text style={styles.section}>Custom voice (optional)</Text>
