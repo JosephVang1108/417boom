@@ -5,8 +5,11 @@ import * as Speech from 'expo-speech';
 
 const KEY_STORAGE = 'elevenlabs_api_key';
 
-// "Brian" — a deep, resonant, comforting American ElevenLabs voice.
-const ELEVEN_VOICE_ID = 'nPczCjzI2devNBz1zQrb';
+// "Jesus — Firm, Deep and Reassuring" from the ElevenLabs voice library.
+// Add it to My Voices in your ElevenLabs account (Voice Library → search
+// "Jesus" → Add). If unavailable, we fall back to "Brian" (deep, calm).
+const ELEVEN_VOICE_ID = '5IDdqnXnlsZ1FCxoOFYg';
+const ELEVEN_FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb';
 const ELEVEN_MODEL = 'eleven_multilingual_v2';
 
 let elevenKey: string | null = null;
@@ -90,26 +93,35 @@ async function speakEleven(
     audioModeReady = true;
   }
 
-  const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE_ID}?output_format=mp3_44100_128`,
-    {
-      method: 'POST',
-      headers: {
-        'xi-api-key': elevenKey!,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text,
-        model_id: ELEVEN_MODEL,
-        voice_settings: {
-          stability: 0.55,
-          similarity_boost: 0.8,
-          style: 0.25,
-          use_speaker_boost: true,
+  const request = (voiceId: string) =>
+    fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': elevenKey!,
+          'Content-Type': 'application/json',
         },
-      }),
-    }
-  );
+        body: JSON.stringify({
+          text,
+          model_id: ELEVEN_MODEL,
+          voice_settings: {
+            stability: 0.7, // higher = more measured, unhurried delivery
+            similarity_boost: 0.85,
+            style: 0.1,
+            use_speaker_boost: true,
+            speed: 0.85, // noticeably slower, calm pacing
+          },
+        }),
+      }
+    );
+
+  // Try the Jesus voice first; fall back to Brian if this account
+  // hasn't added it to My Voices yet.
+  let res = await request(ELEVEN_VOICE_ID);
+  if (!res.ok && res.status >= 400 && res.status < 500) {
+    res = await request(ELEVEN_FALLBACK_VOICE_ID);
+  }
   if (!res.ok) throw new Error(`ElevenLabs ${res.status}`);
 
   const bytes = new Uint8Array(await res.arrayBuffer());
@@ -170,18 +182,24 @@ async function speakDevice(text: string, onDone: () => void): Promise<void> {
   });
 }
 
+export interface TranscribeResult {
+  text: string | null;
+  /** Set when the request failed: 'permission' (key lacks speech-to-text),
+   * 'network', or 'error'. */
+  problem?: 'permission' | 'network' | 'error';
+}
+
 /**
  * Transcribe a recorded audio file with ElevenLabs speech-to-text.
- * Returns the spoken text, or null when unavailable (no key or error).
  */
-export async function transcribe(uri: string): Promise<string | null> {
-  if (!elevenKey) return null;
+export async function transcribe(uri: string): Promise<TranscribeResult> {
+  if (!elevenKey) return { text: null, problem: 'permission' };
   try {
     const form = new FormData();
     form.append('file', {
       uri,
       name: 'speech.m4a',
-      type: 'audio/m4a',
+      type: 'audio/mp4',
     } as unknown as Blob);
     form.append('model_id', 'scribe_v1');
     const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
@@ -189,12 +207,15 @@ export async function transcribe(uri: string): Promise<string | null> {
       headers: { 'xi-api-key': elevenKey },
       body: form,
     });
-    if (!res.ok) return null;
+    if (res.status === 401 || res.status === 403) {
+      return { text: null, problem: 'permission' };
+    }
+    if (!res.ok) return { text: null, problem: 'error' };
     const json = (await res.json()) as { text?: string };
     const text = json.text?.trim();
-    return text ? text : null;
+    return { text: text || null };
   } catch {
-    return null;
+    return { text: null, problem: 'network' };
   }
 }
 

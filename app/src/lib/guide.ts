@@ -4,7 +4,7 @@ import { getName } from './profile';
 export interface GuideResponse {
   topicId: string;
   intro: string;
-  verse: Verse;
+  verse: Verse | null;
   isPrayer?: boolean;
 }
 
@@ -88,6 +88,10 @@ export function respond(input: string): GuideResponse {
   }
 
   const intro = best.intros[nextIndex(usedIntros, best.id, best.intros.length)];
+  // Greetings and small talk stay conversational — no verse.
+  if (best.id === 'greeting') {
+    return { topicId: best.id, intro, verse: null };
+  }
   const verse = best.verses[nextIndex(usedVerses, best.id, best.verses.length)];
   return { topicId: best.id, intro, verse };
 }
@@ -109,7 +113,7 @@ export function speakableRef(ref: string): string {
 
 /** The line spoken aloud by text-to-speech. */
 export function spokenText(response: GuideResponse): string {
-  // A prayer is spoken as-is; the verse stays on screen only.
-  if (response.isPrayer) return response.intro;
+  // A prayer is spoken as-is; the verse (if any) stays on screen only.
+  if (response.isPrayer || !response.verse) return response.intro;
   return `${response.intro} As it is written in ${speakableRef(response.verse.ref)}: ${response.verse.text}`;
 }

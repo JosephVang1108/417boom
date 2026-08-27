@@ -131,9 +131,18 @@ export default function App() {
         // Restore the playback route so replies come out of the speaker.
         await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
         const uri = recorder.uri;
-        const text = uri ? await voice.transcribe(uri) : null;
-        if (text) {
-          await send(text);
+        const result = uri
+          ? await voice.transcribe(uri)
+          : { text: null as string | null };
+        if (result.text) {
+          await send(result.text);
+        } else if (result.problem === 'permission') {
+          Alert.alert(
+            'Key needs Speech to Text',
+            'Your ElevenLabs API key doesn’t allow Speech to Text. In ElevenLabs, create a key with both "Text to Speech" and "Speech to Text" enabled, then save it in ⚙️ settings.'
+          );
+        } else if (result.problem === 'network') {
+          Alert.alert('No connection', 'Please check your internet and try again.');
         } else {
           Alert.alert(
             "I couldn't hear that",
@@ -265,8 +274,12 @@ export default function App() {
                     ]}
                   >
                     <Text style={styles.replyIntro}>{ex.response.intro}</Text>
-                    <Text style={styles.verseText}>“{ex.response.verse.text}”</Text>
-                    <Text style={styles.verseRef}>— {ex.response.verse.ref}</Text>
+                    {ex.response.verse && (
+                      <>
+                        <Text style={styles.verseText}>“{ex.response.verse.text}”</Text>
+                        <Text style={styles.verseRef}>— {ex.response.verse.ref}</Text>
+                      </>
+                    )}
                   </View>
                 ) : (
                   <View style={styles.replyCard}>
