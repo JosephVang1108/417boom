@@ -1,6 +1,13 @@
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+} from 'expo-audio';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   PanResponder,
@@ -24,6 +31,7 @@ import {
   setApiKey,
 } from './src/lib/ai';
 import { respond, spokenText, GuideResponse } from './src/lib/guide';
+import * as profile from './src/lib/profile';
 import * as voice from './src/lib/voice';
 
 interface Exchange {
@@ -48,10 +56,17 @@ export default function App() {
   const [aiReady, setAiReady] = useState(false);
   const [voiceReady, setVoiceReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [praying, setPraying] = useState(false);
+  const [userName, setUserName] = useState('');
+
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   useEffect(() => {
     loadStoredKey().then(setAiReady);
     voice.loadVoiceKey().then(setVoiceReady);
+    profile.loadName().then((n) => setUserName(n ?? ''));
   }, []);
 
   // Dragging a finger over the face leans him toward it.
@@ -71,16 +86,69 @@ export default function App() {
 
   const speak = (response: GuideResponse) => {
     setSpeaking(true);
-    voice.speak(spokenText(response), () => setSpeaking(false));
+    // During a prayer, he closes his eyes and bows his head.
+    if (response.isPrayer) setPraying(true);
+    voice.speak(spokenText(response), () => {
+      setSpeaking(false);
+      setPraying(false);
+    });
   };
 
   const stopSpeaking = () => {
     voice.stop();
     setSpeaking(false);
+    setPraying(false);
   };
 
-  const send = async () => {
-    const question = input.trim();
+  // Tap the mic, speak, tap again — your words become the message.
+  const toggleMic = async () => {
+    if (transcribing) return;
+    if (!voiceReady) {
+      Alert.alert(
+        'Voice input needs ElevenLabs',
+        'Add your ElevenLabs API key in settings (⚙️) to talk to him with your voice.'
+      );
+      return;
+    }
+    if (!recording) {
+      const perm = await AudioModule.requestRecordingPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Microphone needed', 'Allow microphone access to speak.');
+        return;
+      }
+      voice.stop();
+      setSpeaking(false);
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      setRecording(true);
+      setListening(true);
+    } else {
+      setRecording(false);
+      setTranscribing(true);
+      try {
+        await recorder.stop();
+        // Restore the playback route so replies come out of the speaker.
+        await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
+        const uri = recorder.uri;
+        const text = uri ? await voice.transcribe(uri) : null;
+        if (text) {
+          await send(text);
+        } else {
+          Alert.alert(
+            "I couldn't hear that",
+            'Please try speaking again, a little closer to the phone.'
+          );
+        }
+      } finally {
+        setTranscribing(false);
+        setListening(false);
+      }
+    }
+  };
+
+  const send = async (spokenQuestion?: string) => {
+    const question = (spokenQuestion ?? input).trim();
     if (!question) return;
     const id = nextId.current++;
     setHistory((h) => [...h, { id, question, response: null }]);
@@ -130,6 +198,7 @@ export default function App() {
           height={SCREEN_H}
           speaking={speaking}
           listening={listening}
+          praying={praying}
         />
       </View>
 
@@ -209,20 +278,37 @@ export default function App() {
           </ScrollView>
 
           <View style={styles.inputBar}>
+            <Pressable
+              onPress={toggleMic}
+              style={({ pressed }) => [
+                styles.micButton,
+                recording && styles.micRecording,
+                pressed && styles.sendPressed,
+              ]}
+            >
+              <Text style={styles.micText}>{recording ? '■' : '🎤'}</Text>
+            </Pressable>
             <TextInput
               style={styles.input}
               value={input}
               onChangeText={setInput}
               onFocus={() => setListening(true)}
               onBlur={() => setListening(false)}
-              onSubmitEditing={send}
-              placeholder="Speak what is on your heart…"
-              placeholderTextColor="#7A7A72"
+              onSubmitEditing={() => send()}
+              placeholder={
+                recording
+                  ? 'Listening… tap ■ when done'
+                  : transcribing
+                    ? 'Understanding…'
+                    : 'Speak what is on your heart…'
+              }
+              placeholderTextColor={recording ? '#C8A45C' : '#7A7A72'}
               returnKeyType="send"
               multiline={false}
+              editable={!recording && !transcribing}
             />
             <Pressable
-              onPress={send}
+              onPress={() => send()}
               style={({ pressed }) => [styles.sendButton, pressed && styles.sendPressed]}
             >
               <Text style={styles.sendText}>➤</Text>
@@ -231,8 +317,12 @@ export default function App() {
 
           <SettingsModal
             visible={settingsOpen}
+            userName={userName}
             hasAiKey={aiReady}
             hasVoiceKey={voiceReady}
+            onSaveName={(name) => {
+              profile.setName(name).then(() => setUserName(profile.getName() ?? ''));
+            }}
             onSaveAiKey={saveKey}
             onClearAiKey={clearKey}
             onSaveVoiceKey={(key) => {
@@ -409,6 +499,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(185, 150, 78, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  micButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micRecording: {
+    backgroundColor: 'rgba(200, 80, 60, 0.85)',
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  micText: {
+    fontSize: 17,
+    color: '#F2F2EE',
   },
   sendPressed: {
     opacity: 0.7,

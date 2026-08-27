@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -11,8 +11,10 @@ import {
 
 interface Props {
   visible: boolean;
+  userName: string;
   hasAiKey: boolean;
   hasVoiceKey: boolean;
+  onSaveName: (name: string) => void;
   onSaveAiKey: (key: string) => void;
   onClearAiKey: () => void;
   onSaveVoiceKey: (key: string) => void;
@@ -22,8 +24,10 @@ interface Props {
 
 export default function SettingsModal({
   visible,
+  userName,
   hasAiKey,
   hasVoiceKey,
+  onSaveName,
   onSaveAiKey,
   onClearAiKey,
   onSaveVoiceKey,
@@ -32,8 +36,16 @@ export default function SettingsModal({
 }: Props) {
   const [aiDraft, setAiDraft] = useState('');
   const [voiceDraft, setVoiceDraft] = useState('');
+  const [nameDraft, setNameDraft] = useState(userName);
+
+  useEffect(() => {
+    if (visible) setNameDraft(userName);
+  }, [visible, userName]);
 
   const save = () => {
+    if (nameDraft.trim() !== userName) {
+      onSaveName(nameDraft.trim());
+    }
     if (aiDraft.trim()) {
       onSaveAiKey(aiDraft.trim());
       setAiDraft('');
@@ -51,6 +63,20 @@ export default function SettingsModal({
         <View style={styles.card}>
           <ScrollView>
             <Text style={styles.title}>Settings</Text>
+
+            <Text style={styles.section}>Your name</Text>
+            <Text style={styles.body}>
+              So he can speak to you, and pray for you, by name.
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              placeholder="Your first name…"
+              placeholderTextColor="#6E6E66"
+              autoCapitalize="words"
+              autoCorrect={false}
+            />
 
             <Text style={styles.section}>AI Conversations — Claude</Text>
             <Text style={styles.body}>

@@ -29,11 +29,18 @@ export const PORTRAIT_URL =
 export const PORTRAIT_VIDEO_URL: string | null =
   'https://galaxy-prod.tlcdn.com/gen/debef90d4b77451384e73d6955aab448.mp4';
 
+// Eyes closed, head gently bowed — shown while he prays aloud.
+export const PRAYING_URL =
+  'https://galaxy-prod.tlcdn.com/gen/6a7bd948424440198d0ea1eb0ab950ca.png';
+export const PRAYING_VIDEO_URL: string | null =
+  'https://galaxy-prod.tlcdn.com/gen/c40483a9d15140b4a6997c3a9190a631.mp4';
+
 interface Props {
   width: number;
   height: number;
   listening?: boolean;
   speaking?: boolean;
+  praying?: boolean;
 }
 
 /**
@@ -44,7 +51,7 @@ interface Props {
  * leans gently toward touch.
  */
 const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
-  { width, height, listening = false, speaking = false },
+  { width, height, listening = false, speaking = false, praying = false },
   ref
 ) {
   const [videoFailed, setVideoFailed] = useState(false);
@@ -77,6 +84,32 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
       }).start();
     }
   }, [status, stillOpacity]);
+
+  // Praying: cross-dissolve to the eyes-closed portrait while he prays.
+  const prayPlayer = useVideoPlayer(PRAYING_VIDEO_URL, (p) => {
+    p.loop = true;
+    p.muted = true;
+  });
+  const prayOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (praying) {
+      if (PRAYING_VIDEO_URL) prayPlayer.play();
+      Animated.timing(prayOpacity, {
+        toValue: 1,
+        duration: 900,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(prayOpacity, {
+        toValue: 0,
+        duration: 900,
+        useNativeDriver: true,
+      }).start(() => {
+        if (PRAYING_VIDEO_URL) prayPlayer.pause();
+      });
+    }
+  }, [praying, prayOpacity, prayPlayer]);
 
   const gazeX = useRef(new Animated.Value(0)).current;
   const gazeY = useRef(new Animated.Value(0)).current;
@@ -236,6 +269,30 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
             resizeMode="cover"
             onError={() => setImageFailed(true)}
           />
+        </Animated.View>
+
+        {/* Praying: eyes closed, head bowed — fades in while he prays. */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: prayOpacity, transform: [{ scale: breathScale }] },
+          ]}
+          pointerEvents="none"
+        >
+          {PRAYING_VIDEO_URL ? (
+            <VideoView
+              player={prayPlayer}
+              style={styles.portrait}
+              contentFit="cover"
+              nativeControls={false}
+            />
+          ) : (
+            <Image
+              source={{ uri: PRAYING_URL }}
+              style={styles.portrait}
+              resizeMode="cover"
+            />
+          )}
         </Animated.View>
       </Animated.View>
 
