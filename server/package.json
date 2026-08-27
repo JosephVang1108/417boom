@@ -1,0 +1,16 @@
+{
+  "name": "abide-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend proxy for the Abide app: holds the Claude and ElevenLabs API keys so the mobile app never ships or stores them.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.22.2"
+  }
+}
