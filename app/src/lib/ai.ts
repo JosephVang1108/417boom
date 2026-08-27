@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import * as SecureStore from 'expo-secure-store';
 import { z } from 'zod';
+import { BACKEND_TOKEN, BACKEND_URL, backendConfigured } from './config';
 import { GuideResponse } from './guide';
 import { getAbout, getName } from './profile';
 
@@ -102,6 +103,11 @@ export function hasApiKey(): boolean {
   return !!cachedKey;
 }
 
+/** AI replies are possible: the backend is configured, or a key is set. */
+export function isAiAvailable(): boolean {
+  return backendConfigured() || !!cachedKey;
+}
+
 export function resetConversation(): void {
   history.length = 0;
   verseCooldown = 0;
@@ -109,10 +115,19 @@ export function resetConversation(): void {
 
 function getClient(): Anthropic {
   if (!client) {
-    client = new Anthropic({
-      apiKey: cachedKey ?? '',
-      dangerouslyAllowBrowser: true,
-    });
+    client = backendConfigured()
+      ? new Anthropic({
+          // The Abide server is Anthropic-wire-compatible; the shared
+          // app token stands in for the API key and is swapped
+          // server-side for the real one.
+          baseURL: BACKEND_URL!,
+          apiKey: BACKEND_TOKEN!,
+          dangerouslyAllowBrowser: true,
+        })
+      : new Anthropic({
+          apiKey: cachedKey ?? '',
+          dangerouslyAllowBrowser: true,
+        });
   }
   return client;
 }
@@ -123,7 +138,7 @@ function getClient(): Anthropic {
  * caller can fall back to the offline verse engine.
  */
 export async function aiRespond(userText: string): Promise<GuideResponse | null> {
-  if (!cachedKey) return null;
+  if (!isAiAvailable()) return null;
 
   const messages: Anthropic.MessageParam[] = [
     ...history,
@@ -173,7 +188,7 @@ export async function aiRespond(userText: string): Promise<GuideResponse | null>
       isStory: parsed.is_story,
     };
   } catch (error) {
-    if (error instanceof Anthropic.AuthenticationError) {
+    if (error instanceof Anthropic.AuthenticationError && !backendConfigured()) {
       // Bad key — clear it so the UI can prompt again.
       cachedKey = null;
       client = null;

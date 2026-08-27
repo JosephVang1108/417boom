@@ -2,6 +2,7 @@ import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SecureStore from 'expo-secure-store';
 import * as Speech from 'expo-speech';
+import { BACKEND_TOKEN, BACKEND_URL, backendConfigured } from './config';
 
 const KEY_STORAGE = 'elevenlabs_api_key';
 const VOICE_ID_STORAGE = 'elevenlabs_voice_id';
@@ -54,6 +55,11 @@ export function hasVoiceKey(): boolean {
   return !!elevenKey;
 }
 
+/** Natural voice is possible: the backend is configured, or a key is set. */
+export function voiceAvailable(): boolean {
+  return backendConfigured() || !!elevenKey;
+}
+
 export async function setCustomVoiceId(id: string): Promise<void> {
   const trimmed = id.trim();
   customVoiceId = trimmed || null;
@@ -87,13 +93,30 @@ export async function synthesize(
   text: string,
   options: SpeakOptions = {}
 ): Promise<string | null> {
-  if (!elevenKey) return null;
-  try {
-    if (!audioModeReady) {
-      // Play even when the iPhone silent switch is on.
+  if (!audioModeReady) {
+    // Play even when the iPhone silent switch is on.
+    try {
       await setAudioModeAsync({ playsInSilentMode: true });
       audioModeReady = true;
+    } catch {
+      // non-fatal
     }
+  }
+
+  // Backend mode: the server streams the audio, so the "file" is simply
+  // its URL — playback starts while generation is still in progress.
+  if (backendConfigured()) {
+    const params = new URLSearchParams({
+      token: BACKEND_TOKEN!,
+      text,
+      ...(options.story ? { story: '1' } : {}),
+      ...(customVoiceId ? { voice: customVoiceId } : {}),
+    });
+    return `${BACKEND_URL}/tts?${params.toString()}`;
+  }
+
+  if (!elevenKey) return null;
+  try {
 
     const request = (voiceId: string, model: ElevenModel) => {
       // v3 is expressive on its own and rejects some v2 settings —
@@ -206,7 +229,7 @@ export async function speak(
   stop();
   const myGen = ++generation;
 
-  if (elevenKey) {
+  if (elevenKey || backendConfigured()) {
     // Long text (stories, prayers): split at sentence boundaries and
     // pipeline — a short opener starts quickly, and each next passage
     // is generated while the previous one plays.
@@ -321,6 +344,28 @@ export interface TranscribeResult {
  * Transcribe a recorded audio file with ElevenLabs speech-to-text.
  */
 export async function transcribe(uri: string): Promise<TranscribeResult> {
+  // Backend mode: send the recording to the Abide server.
+  if (backendConfigured()) {
+    try {
+      const audioBase64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const res = await fetch(`${BACKEND_URL}/stt`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': BACKEND_TOKEN!,
+        },
+        body: JSON.stringify({ audioBase64, mimeType: 'audio/mp4' }),
+      });
+      if (!res.ok) return { text: null, problem: 'error' };
+      const json = (await res.json()) as { text?: string };
+      return { text: json.text?.trim() || null };
+    } catch {
+      return { text: null, problem: 'network' };
+    }
+  }
+
   if (!elevenKey) return { text: null, problem: 'permission' };
   try {
     const form = new FormData();

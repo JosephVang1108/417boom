@@ -28,10 +28,12 @@ import SettingsModal from './src/components/SettingsModal';
 import {
   aiRespond,
   hasApiKey,
+  isAiAvailable,
   loadStoredKey,
   resetConversation,
   setApiKey,
 } from './src/lib/ai';
+import { backendConfigured } from './src/lib/config';
 import {
   displayText,
   encouragement,
@@ -115,9 +117,9 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    loadStoredKey().then(setAiReady);
-    voice.loadVoiceKey().then((ready) => {
-      setVoiceReady(ready);
+    loadStoredKey().then(() => setAiReady(isAiAvailable()));
+    voice.loadVoiceKey().then(() => {
+      setVoiceReady(voice.voiceAvailable());
       setVoiceId(voice.getCustomVoiceId() ?? '');
     });
     profile.loadProfile().then(({ name, onboarded }) => {
@@ -248,7 +250,7 @@ export default function App() {
     let response: GuideResponse | null = null;
     if (aiReady) {
       response = await aiRespond(question);
-      if (!hasApiKey()) setAiReady(false); // key was rejected
+      if (!isAiAvailable()) setAiReady(false); // key was rejected
     }
     if (!response) response = respond(question);
 
@@ -259,13 +261,13 @@ export default function App() {
   const saveKey = async (key: string) => {
     await setApiKey(key);
     resetConversation();
-    setAiReady(hasApiKey());
+    setAiReady(isAiAvailable());
   };
 
   const clearKey = async () => {
     await setApiKey('');
     resetConversation();
-    setAiReady(false);
+    setAiReady(isAiAvailable());
   };
 
   const toggleVoice = () => {
@@ -439,8 +441,9 @@ export default function App() {
               voice.setVoiceKey(key).then(() => setVoiceReady(voice.hasVoiceKey()));
             }}
             onClearVoiceKey={() => {
-              voice.setVoiceKey('').then(() => setVoiceReady(false));
+              voice.setVoiceKey('').then(() => setVoiceReady(voice.voiceAvailable()));
             }}
+            backendMode={backendConfigured()}
             onReplayWelcome={() => {
               setSettingsOpen(false);
               setOnboardingVisible(true);
