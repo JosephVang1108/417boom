@@ -123,7 +123,8 @@ export async function aiRespond(userText: string): Promise<GuideResponse | null>
       max_tokens: 2048,
       output_config: {
         format: zodOutputFormat(GuidanceSchema),
-        effort: 'medium',
+        // Low effort keeps replies quick — right for warm conversation.
+        effort: 'low',
       },
       system: systemPrompt(),
       messages,

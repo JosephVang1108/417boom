@@ -12,10 +12,14 @@ const VOICE_ID_STORAGE = 'elevenlabs_voice_id';
 const ELEVEN_VOICE_ID = 'pdNm5Q6lQvK6VrviGGq1';
 const ELEVEN_FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb';
 
-// Prefer the expressive v3 model — it performs pauses, breaths, and
-// audio tags like [gentle sigh]. Fall back to multilingual v2 for
-// accounts/voices where v3 isn't available.
-const ELEVEN_MODELS = ['eleven_v3', 'eleven_multilingual_v2'] as const;
+// Two delivery modes:
+// - Long or heavy replies (prayers, comfort, verses): expressive v3,
+//   which performs pauses, breaths, and tags like [gentle sigh].
+// - Short casual replies ("I hear you. I'm right here."): fast Turbo
+//   at natural pace, so small talk answers quickly and lightly.
+// Multilingual v2 is the universal fallback for both.
+type ElevenModel = 'eleven_v3' | 'eleven_turbo_v2_5' | 'eleven_multilingual_v2';
+const EXPRESSIVE_THRESHOLD = 100; // characters
 
 let elevenKey: string | null = null;
 let customVoiceId: string | null = null;
@@ -119,9 +123,14 @@ async function speakEleven(
     audioModeReady = true;
   }
 
-  const request = (voiceId: string, model: (typeof ELEVEN_MODELS)[number]) => {
+  const request = (voiceId: string, model: ElevenModel) => {
     // v3 is expressive on its own and rejects some v2 settings —
-    // keep its config minimal; v2 gets the tuned settings.
+    // keep its config minimal; the others get tuned settings.
+    // Non-v3 models don't perform [audio tags], so strip them there.
+    const speakable =
+      model === 'eleven_v3'
+        ? text
+        : text.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
     const voice_settings =
       model === 'eleven_v3'
         ? { stability: 0.5, use_speaker_boost: true }
@@ -130,7 +139,7 @@ async function speakEleven(
             similarity_boost: 0.85,
             style: 0.1,
             use_speaker_boost: true,
-            speed: 0.95,
+            speed: 1.0,
           };
     return fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
@@ -140,14 +149,18 @@ async function speakEleven(
           'xi-api-key': elevenKey!,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text, model_id: model, voice_settings }),
+        body: JSON.stringify({ text: speakable, model_id: model, voice_settings }),
       }
     );
   };
 
+  const models: ElevenModel[] =
+    text.length > EXPRESSIVE_THRESHOLD
+      ? ['eleven_v3', 'eleven_multilingual_v2']
+      : ['eleven_turbo_v2_5', 'eleven_multilingual_v2'];
+
   // Order: the user's own chosen/designed voice, then the designed
-  // default, then Brian — expressive v3 first, then v2 — first
-  // combination this account can use wins.
+  // default, then Brian — first combination this account can use wins.
   const candidates = [
     ...(customVoiceId ? [customVoiceId] : []),
     ELEVEN_VOICE_ID,
@@ -155,7 +168,7 @@ async function speakEleven(
   ];
   let res: Response | null = null;
   outer: for (const voiceId of candidates) {
-    for (const model of ELEVEN_MODELS) {
+    for (const model of models) {
       res = await request(voiceId, model);
       if (res.ok || res.status >= 500) break outer;
     }
