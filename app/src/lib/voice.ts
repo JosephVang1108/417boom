@@ -23,6 +23,7 @@ let customVoiceId: string | null = null;
 let currentPlayer: AudioPlayer | null = null;
 let audioModeReady = false;
 let generation = 0; // invalidates in-flight speech when stop() is called
+let fileCounter = 0;
 
 export async function loadVoiceKey(): Promise<boolean> {
   try {
@@ -32,6 +33,24 @@ export async function loadVoiceKey(): Promise<boolean> {
     elevenKey = null;
     customVoiceId = null;
   }
+  return !!elevenKey;
+}
+
+export async function setVoiceKey(key: string): Promise<void> {
+  const trimmed = key.trim();
+  elevenKey = trimmed || null;
+  try {
+    if (trimmed) {
+      await SecureStore.setItemAsync(KEY_STORAGE, trimmed);
+    } else {
+      await SecureStore.deleteItemAsync(KEY_STORAGE);
+    }
+  } catch {
+    // Storage unavailable — key still works for this session.
+  }
+}
+
+export function hasVoiceKey(): boolean {
   return !!elevenKey;
 }
 
@@ -53,34 +72,132 @@ export function getCustomVoiceId(): string | null {
   return customVoiceId;
 }
 
-export async function setVoiceKey(key: string): Promise<void> {
-  const trimmed = key.trim();
-  elevenKey = trimmed || null;
-  try {
-    if (trimmed) {
-      await SecureStore.setItemAsync(KEY_STORAGE, trimmed);
-    } else {
-      await SecureStore.deleteItemAsync(KEY_STORAGE);
-    }
-  } catch {
-    // Storage unavailable — key still works for this session.
-  }
-}
-
-export function hasVoiceKey(): boolean {
-  return !!elevenKey;
-}
-
-/**
- * Speak text aloud. Uses ElevenLabs (soothing, natural voice) when a key
- * is set; otherwise falls back to the device voice, preferring a calm
- * male one. onDone fires when playback finishes, is stopped, or errors.
- */
 export interface SpeakOptions {
   /** Storytelling delivery: livelier, more expressive pacing. */
   story?: boolean;
 }
 
+/**
+ * Generate speech audio with ElevenLabs and return the local file uri,
+ * or null when unavailable (no key, network error, all voices refused).
+ * Does not play anything — pair with playUri. Safe to call while other
+ * audio is playing (used to pre-generate the next Bible passage).
+ */
+export async function synthesize(
+  text: string,
+  options: SpeakOptions = {}
+): Promise<string | null> {
+  if (!elevenKey) return null;
+  try {
+    if (!audioModeReady) {
+      // Play even when the iPhone silent switch is on.
+      await setAudioModeAsync({ playsInSilentMode: true });
+      audioModeReady = true;
+    }
+
+    const request = (voiceId: string, model: ElevenModel) => {
+      // v3 is expressive on its own and rejects some v2 settings —
+      // keep its config minimal; v2 gets tuned settings.
+      // Non-v3 models don't perform [audio tags], so strip them there.
+      const speakable =
+        model === 'eleven_v3'
+          ? text
+          : text.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
+      const voice_settings =
+        model === 'eleven_v3'
+          ? {
+              // Stories get the Natural (expressive) setting for lively
+              // telling; conversation stays on Robust for consistency.
+              stability: options.story ? 0.5 : 1.0,
+              use_speaker_boost: true,
+            }
+          : {
+              stability: options.story ? 0.45 : 0.65,
+              similarity_boost: 0.85,
+              style: options.story ? 0.35 : 0.1,
+              use_speaker_boost: true,
+              speed: options.story ? 1.05 : 0.95,
+            };
+      return fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+        {
+          method: 'POST',
+          headers: {
+            'xi-api-key': elevenKey!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: speakable,
+            model_id: model,
+            voice_settings,
+            seed: VOICE_SEED,
+          }),
+        }
+      );
+    };
+
+    const models: ElevenModel[] = ['eleven_v3', 'eleven_multilingual_v2'];
+    const candidates = [
+      ...(customVoiceId ? [customVoiceId] : []),
+      ELEVEN_VOICE_ID,
+      ELEVEN_FALLBACK_VOICE_ID,
+    ];
+    let res: Response | null = null;
+    outer: for (const voiceId of candidates) {
+      for (const model of models) {
+        res = await request(voiceId, model);
+        if (res.ok || res.status >= 500) break outer;
+      }
+    }
+    if (!res || !res.ok) return null;
+
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const path = `${FileSystem.cacheDirectory}abide-voice-${++fileCounter}.mp3`;
+    await FileSystem.writeAsStringAsync(path, toBase64(bytes), {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    return path;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Play a local audio file (from synthesize), replacing any current
+ * playback. onDone fires when it finishes naturally — not when stopped.
+ */
+export function playUri(uri: string, onDone: () => void): void {
+  if (currentPlayer) {
+    const p = currentPlayer;
+    currentPlayer = null;
+    try {
+      p.pause();
+      p.remove();
+    } catch {
+      // already released
+    }
+  }
+  const player = createAudioPlayer({ uri });
+  currentPlayer = player;
+  player.addListener('playbackStatusUpdate', (status) => {
+    if (status.didJustFinish) {
+      if (currentPlayer === player) currentPlayer = null;
+      try {
+        player.remove();
+      } catch {
+        // already released
+      }
+      onDone();
+    }
+  });
+  player.play();
+}
+
+/**
+ * Speak text aloud. Uses ElevenLabs when a key is set; otherwise falls
+ * back to the device voice, preferring a calm male one. onDone fires
+ * when playback finishes, is stopped, or errors.
+ */
 export async function speak(
   text: string,
   onDone: () => void,
@@ -90,15 +207,57 @@ export async function speak(
   const myGen = ++generation;
 
   if (elevenKey) {
-    try {
-      await speakEleven(text, myGen, onDone, options);
+    // Long text (stories, prayers): split at sentence boundaries and
+    // pipeline — a short opener starts quickly, and each next passage
+    // is generated while the previous one plays.
+    if (text.length > 1300) {
+      const chunks = splitForSpeech(text);
+      let upcoming = synthesize(chunks[0], options);
+      const playFrom = async (i: number) => {
+        const uri = await upcoming;
+        if (myGen !== generation) return;
+        if (!uri) {
+          await speakDevice(text, onDone);
+          return;
+        }
+        if (i + 1 < chunks.length) upcoming = synthesize(chunks[i + 1], options);
+        playUri(uri, () => {
+          if (myGen !== generation) return;
+          if (i + 1 < chunks.length) playFrom(i + 1);
+          else onDone();
+        });
+      };
+      playFrom(0);
       return;
-    } catch {
-      if (myGen !== generation) return; // stopped while fetching
-      // fall through to the device voice
+    }
+
+    const uri = await synthesize(text, options);
+    if (myGen !== generation) return; // stopped while generating
+    if (uri) {
+      playUri(uri, onDone);
+      return;
     }
   }
   await speakDevice(text, onDone);
+}
+
+// Split long text into speech chunks at sentence boundaries: a short
+// opener (fast start) followed by larger passages.
+function splitForSpeech(text: string): string[] {
+  const sentences = text.match(/[^.!?…]+[.!?…]+["']?\s*/g) ?? [text];
+  const chunks: string[] = [];
+  let current = '';
+  let limit = 400;
+  for (const s of sentences) {
+    if (current && current.length + s.length > limit) {
+      chunks.push(current);
+      current = '';
+      limit = 1100;
+    }
+    current += s;
+  }
+  if (current.trim()) chunks.push(current);
+  return chunks;
 }
 
 export function stop(): void {
@@ -117,102 +276,6 @@ export function stop(): void {
 }
 
 // ---------------------------------------------------------------------------
-
-async function speakEleven(
-  text: string,
-  myGen: number,
-  onDone: () => void,
-  options: SpeakOptions = {}
-): Promise<void> {
-  if (!audioModeReady) {
-    // Play even when the iPhone silent switch is on.
-    await setAudioModeAsync({ playsInSilentMode: true });
-    audioModeReady = true;
-  }
-
-  const request = (voiceId: string, model: ElevenModel) => {
-    // v3 is expressive on its own and rejects some v2 settings —
-    // keep its config minimal; the others get tuned settings.
-    // Non-v3 models don't perform [audio tags], so strip them there.
-    const speakable =
-      model === 'eleven_v3'
-        ? text
-        : text.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
-    const voice_settings =
-      model === 'eleven_v3'
-        ? {
-            // Stories get the Natural (expressive) setting for lively
-            // telling; conversation stays on Robust for consistency.
-            stability: options.story ? 0.5 : 1.0,
-            use_speaker_boost: true,
-          }
-        : {
-            stability: options.story ? 0.45 : 0.65,
-            similarity_boost: 0.85,
-            style: options.story ? 0.35 : 0.1,
-            use_speaker_boost: true,
-            speed: options.story ? 1.05 : 0.95,
-          };
-    return fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
-      {
-        method: 'POST',
-        headers: {
-          'xi-api-key': elevenKey!,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: speakable,
-          model_id: model,
-          voice_settings,
-          seed: VOICE_SEED,
-        }),
-      }
-    );
-  };
-
-  const models: ElevenModel[] = ['eleven_v3', 'eleven_multilingual_v2'];
-
-  // Order: the user's own chosen/designed voice, then the designed
-  // default, then Brian — first combination this account can use wins.
-  const candidates = [
-    ...(customVoiceId ? [customVoiceId] : []),
-    ELEVEN_VOICE_ID,
-    ELEVEN_FALLBACK_VOICE_ID,
-  ];
-  let res: Response | null = null;
-  outer: for (const voiceId of candidates) {
-    for (const model of models) {
-      res = await request(voiceId, model);
-      if (res.ok || res.status >= 500) break outer;
-    }
-  }
-  if (!res || !res.ok) throw new Error(`ElevenLabs ${res?.status ?? 'error'}`);
-
-  const bytes = new Uint8Array(await res.arrayBuffer());
-  if (myGen !== generation) return;
-
-  const path = `${FileSystem.cacheDirectory}abide-voice-${myGen}.mp3`;
-  await FileSystem.writeAsStringAsync(path, toBase64(bytes), {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  if (myGen !== generation) return;
-
-  const player = createAudioPlayer({ uri: path });
-  currentPlayer = player;
-  player.addListener('playbackStatusUpdate', (status) => {
-    if (status.didJustFinish) {
-      if (currentPlayer === player) currentPlayer = null;
-      try {
-        player.remove();
-      } catch {
-        // already released
-      }
-      onDone();
-    }
-  });
-  player.play();
-}
 
 // Prefer a calm male device voice for the no-key fallback.
 let devicePick: string | undefined;
@@ -237,7 +300,7 @@ async function speakDevice(text: string, onDone: () => void): Promise<void> {
       devicePick = undefined;
     }
   }
-  Speech.speak(text, {
+  Speech.speak(text.replace(/\[[^\]]*\]/g, ''), {
     voice: devicePick,
     rate: 0.88,
     pitch: 0.72,

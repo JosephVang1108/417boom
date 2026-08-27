@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -22,8 +23,12 @@ interface Props {
   onClose: () => void;
 }
 
-// Keep each spoken chunk under the voice service's comfortable limit.
-const CHUNK_CHARS = 2200;
+// Small first passage so reading starts within seconds; larger after.
+// While one passage plays, the next is generated in the background.
+const FIRST_CHUNK_CHARS = 350;
+const CHUNK_CHARS = 1100;
+
+const ALL_BOOKS = [...OLD_TESTAMENT, ...NEW_TESTAMENT];
 
 export default function BibleScreen({ visible, onClose }: Props) {
   const [book, setBook] = useState<BibleBook | null>(null);
@@ -55,13 +60,23 @@ export default function BibleScreen({ visible, onClose }: Props) {
 
   const readAloud = () => {
     if (!verses || !book || !chapter) return;
-    // Split the chapter into chunks and speak them in sequence.
+    if (!voice.hasVoiceKey()) {
+      Alert.alert(
+        'Voice needs ElevenLabs',
+        'Add your ElevenLabs API key in ⚙️ settings to have chapters read aloud.'
+      );
+      return;
+    }
+    // Split the chapter into passages: a short opener so audio starts
+    // within seconds, then larger ones generated while the previous plays.
     const chunks: string[] = [];
     let current = `${book.name}, chapter ${chapter}. … `;
+    let limit = FIRST_CHUNK_CHARS;
     for (const v of verses) {
-      if (current.length + v.text.length > CHUNK_CHARS) {
+      if (current.length + v.text.length > limit && current.trim()) {
         chunks.push(current);
         current = '';
+        limit = CHUNK_CHARS;
       }
       current += v.text + ' ';
     }
@@ -69,16 +84,48 @@ export default function BibleScreen({ visible, onClose }: Props) {
 
     readingRef.current = true;
     setReading(true);
-    let i = 0;
-    const next = () => {
-      if (!readingRef.current || i >= chunks.length) {
+
+    let upcoming = voice.synthesize(chunks[0]);
+    const playFrom = async (i: number) => {
+      const uri = await upcoming;
+      if (!readingRef.current) return;
+      if (!uri) {
         readingRef.current = false;
         setReading(false);
+        Alert.alert(
+          "Couldn't read aloud",
+          'The voice service didn’t respond. Check your internet and ElevenLabs credits, then try again.'
+        );
         return;
       }
-      voice.speak(chunks[i++], next);
+      if (i + 1 < chunks.length) upcoming = voice.synthesize(chunks[i + 1]);
+      voice.playUri(uri, () => {
+        if (!readingRef.current) return;
+        if (i + 1 < chunks.length) {
+          playFrom(i + 1);
+        } else {
+          readingRef.current = false;
+          setReading(false);
+        }
+      });
     };
-    next();
+    playFrom(0);
+  };
+
+  // Move to the adjacent chapter, flowing across book boundaries.
+  const goChapter = (dir: 1 | -1) => {
+    if (!book || chapter === null) return;
+    stopReading();
+    const target = chapter + dir;
+    if (target >= 1 && target <= book.chapters) {
+      setChapter(target);
+      return;
+    }
+    const idx = ALL_BOOKS.findIndex((b) => b.name === book.name);
+    const nextBook = ALL_BOOKS[idx + dir];
+    if (!nextBook) return;
+    setBook(nextBook);
+    setChapter(dir === 1 ? 1 : nextBook.chapters);
   };
 
   const close = () => {
@@ -170,13 +217,19 @@ export default function BibleScreen({ visible, onClose }: Props) {
             </ScrollView>
             {verses && (
               <View style={styles.readBar}>
+                <Pressable style={styles.navButton} onPress={() => goChapter(-1)}>
+                  <Text style={styles.navButtonText}>‹ Prev</Text>
+                </Pressable>
                 <Pressable
                   style={[styles.readButton, reading && styles.readButtonActive]}
                   onPress={reading ? stopReading : readAloud}
                 >
                   <Text style={styles.readButtonText}>
-                    {reading ? '■ Stop reading' : '▶ Read to me'}
+                    {reading ? '■ Stop' : '▶ Read to me'}
                   </Text>
+                </Pressable>
+                <Pressable style={styles.navButton} onPress={() => goChapter(1)}>
+                  <Text style={styles.navButtonText}>Next ›</Text>
                 </Pressable>
               </View>
             )}
@@ -281,8 +334,23 @@ const styles = StyleSheet.create({
     padding: 14,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  navButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  navButtonText: {
+    color: '#E8E8E2',
+    fontSize: 14,
   },
   readButton: {
+    flex: 1,
     backgroundColor: '#B9964E',
     borderRadius: 14,
     paddingVertical: 13,
