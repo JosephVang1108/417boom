@@ -19,6 +19,16 @@ let prayerIdx = -1;
 
 const PRAYER_WORDS = ['pray', 'prayer', 'praying'];
 
+// When they ask for prayer without saying what for, we ask first;
+// their next message becomes the prayer request.
+let awaitingPrayerRequest = false;
+
+const PRAYER_ASKS = [
+  'Of course. What would you like us to bring before the Father — someone you love, your work, a worry, your own heart?',
+  'I will. Tell me what is on your heart — a person, a situation, anything at all.',
+];
+let prayerAskIdx = -1;
+
 // Remember what we've already said so consecutive answers don't repeat.
 const usedVerses = new Map<string, number>();
 const usedIntros = new Map<string, number>();
@@ -62,18 +72,33 @@ function scoreTopic(topic: Topic, text: string): number {
 export function respond(input: string): GuideResponse {
   const text = normalize(input);
 
-  // A request for prayer becomes a spoken prayer.
-  if (PRAYER_WORDS.some((w) => text.includes(` ${w} `))) {
+  const mentionsPrayer = PRAYER_WORDS.some((w) => text.includes(` ${w} `));
+  const contentWords = text
+    .split(' ')
+    .filter((w) => w && !PRAYER_WORDS.includes(w)).length;
+
+  // They told us what to pray for (after we asked, or in the same
+  // breath as the request) — now we pray.
+  if (awaitingPrayerRequest || (mentionsPrayer && contentWords > 6)) {
+    awaitingPrayerRequest = false;
     prayerIdx = (prayerIdx + 1) % PRAYERS.length;
     const name = getName() ?? 'Your child';
     return {
       topicId: 'prayer',
       intro: PRAYERS[prayerIdx].replace(/\{name\}/g, name),
-      verse: {
-        ref: 'Philippians 4:6–7',
-        text: 'In nothing be anxious, but in everything, by prayer and petition with thanksgiving, let your requests be made known to God. And the peace of God, which surpasses all understanding, will guard your hearts and your thoughts in Christ Jesus.',
-      },
+      verse: null,
       isPrayer: true,
+    };
+  }
+
+  // A bare "pray for me" — ask what they'd like to bring first.
+  if (mentionsPrayer) {
+    awaitingPrayerRequest = true;
+    prayerAskIdx = (prayerAskIdx + 1) % PRAYER_ASKS.length;
+    return {
+      topicId: 'prayer_ask',
+      intro: PRAYER_ASKS[prayerAskIdx],
+      verse: null,
     };
   }
 

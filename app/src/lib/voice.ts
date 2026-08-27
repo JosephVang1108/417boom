@@ -128,11 +128,11 @@ async function speakEleven(
           text,
           model_id: ELEVEN_MODEL,
           voice_settings: {
-            stability: 0.7, // higher = more measured, unhurried delivery
+            stability: 0.65, // measured but not sluggish
             similarity_boost: 0.85,
             style: 0.1,
             use_speaker_boost: true,
-            speed: 0.85, // noticeably slower, calm pacing
+            speed: 0.95, // natural pace, just a touch unhurried
           },
         }),
       }
