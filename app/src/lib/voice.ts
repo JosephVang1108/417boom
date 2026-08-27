@@ -12,14 +12,11 @@ const VOICE_ID_STORAGE = 'elevenlabs_voice_id';
 const ELEVEN_VOICE_ID = 'pdNm5Q6lQvK6VrviGGq1';
 const ELEVEN_FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb';
 
-// Two delivery modes:
-// - Long or heavy replies (prayers, comfort, verses): expressive v3,
-//   which performs pauses, breaths, and tags like [gentle sigh].
-// - Short casual replies ("I hear you. I'm right here."): fast Turbo
-//   at natural pace, so small talk answers quickly and lightly.
-// Multilingual v2 is the universal fallback for both.
-type ElevenModel = 'eleven_v3' | 'eleven_turbo_v2_5' | 'eleven_multilingual_v2';
-const EXPRESSIVE_THRESHOLD = 100; // characters
+// One engine for every reply so accent and pacing never shift between
+// (or within) messages: expressive v3 at its most consistent setting,
+// with a fixed seed. Multilingual v2 is the universal fallback.
+type ElevenModel = 'eleven_v3' | 'eleven_multilingual_v2';
+const VOICE_SEED = 42;
 
 let elevenKey: string | null = null;
 let customVoiceId: string | null = null;
@@ -133,13 +130,13 @@ async function speakEleven(
         : text.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
     const voice_settings =
       model === 'eleven_v3'
-        ? { stability: 0.5, use_speaker_boost: true }
+        ? { stability: 1.0, use_speaker_boost: true } // Robust: maximum consistency
         : {
             stability: 0.65,
             similarity_boost: 0.85,
             style: 0.1,
             use_speaker_boost: true,
-            speed: 1.0,
+            speed: 0.95,
           };
     return fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
@@ -149,15 +146,17 @@ async function speakEleven(
           'xi-api-key': elevenKey!,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: speakable, model_id: model, voice_settings }),
+        body: JSON.stringify({
+          text: speakable,
+          model_id: model,
+          voice_settings,
+          seed: VOICE_SEED,
+        }),
       }
     );
   };
 
-  const models: ElevenModel[] =
-    text.length > EXPRESSIVE_THRESHOLD
-      ? ['eleven_v3', 'eleven_multilingual_v2']
-      : ['eleven_turbo_v2_5', 'eleven_multilingual_v2'];
+  const models: ElevenModel[] = ['eleven_v3', 'eleven_multilingual_v2'];
 
   // Order: the user's own chosen/designed voice, then the designed
   // default, then Brian — first combination this account can use wins.

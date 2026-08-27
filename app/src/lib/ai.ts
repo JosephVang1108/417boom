@@ -3,7 +3,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import * as SecureStore from 'expo-secure-store';
 import { z } from 'zod';
 import { GuideResponse } from './guide';
-import { getName } from './profile';
+import { getAbout, getName } from './profile';
 
 const KEY_STORAGE = 'anthropic_api_key';
 const MODEL = 'claude-opus-5';
@@ -31,9 +31,15 @@ Care:
 
 function systemPrompt(): string {
   const name = getName();
-  return name
-    ? `${SYSTEM_PROMPT}\n\nThe person's name is ${name}. Weave their name in naturally and warmly now and then — especially in prayers — but not in every message.`
-    : SYSTEM_PROMPT;
+  const about = getAbout();
+  let prompt = SYSTEM_PROMPT;
+  if (name) {
+    prompt += `\n\nThe person's name is ${name}. Weave their name in naturally and warmly now and then — especially in prayers — but not in every message.`;
+  }
+  if (about) {
+    prompt += `\nWhat they shared about themselves when they first arrived: "${about}". Hold this with care and let it quietly inform how you speak with them.`;
+  }
+  return prompt;
 }
 
 const GuidanceSchema = z.object({

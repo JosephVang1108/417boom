@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { JesusFaceHandle } from './src/components/JesusFace';
 import JesusPortrait from './src/components/JesusPortrait';
+import OnboardingModal from './src/components/OnboardingModal';
 import SettingsModal from './src/components/SettingsModal';
 import {
   aiRespond,
@@ -61,6 +62,7 @@ export default function App() {
   const [praying, setPraying] = useState(false);
   const [userName, setUserName] = useState('');
   const [voiceId, setVoiceId] = useState('');
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
@@ -70,8 +72,27 @@ export default function App() {
       setVoiceReady(ready);
       setVoiceId(voice.getCustomVoiceId() ?? '');
     });
-    profile.loadName().then((n) => setUserName(n ?? ''));
+    profile.loadProfile().then(({ name, onboarded }) => {
+      setUserName(name ?? '');
+      if (!onboarded) setOnboardingVisible(true);
+    });
   }, []);
+
+  const completeOnboarding = async (name: string, about: string) => {
+    await profile.setName(name);
+    if (about) await profile.setAbout(about);
+    await profile.markOnboarded();
+    setUserName(name);
+    setOnboardingVisible(false);
+    // He greets them by name the moment they arrive.
+    const greeting: GuideResponse = {
+      topicId: 'welcome',
+      intro: `Welcome, ${name}. … I'm so glad you're here. Whenever you're ready — tell me what's on your heart.`,
+      verse: null,
+    };
+    setHistory([{ id: nextId.current++, question: '', response: greeting }]);
+    if (voiceOn) speak(greeting);
+  };
 
   // Dragging a finger over the face leans him toward it.
   const pan = useRef(
@@ -267,9 +288,11 @@ export default function App() {
             )}
             {history.map((ex) => (
               <View key={ex.id} style={styles.exchange}>
-                <View style={styles.userBubble}>
-                  <Text style={styles.userText}>{ex.question}</Text>
-                </View>
+                {!!ex.question && (
+                  <View style={styles.userBubble}>
+                    <Text style={styles.userText}>{ex.question}</Text>
+                  </View>
+                )}
                 {ex.response ? (
                   <View
                     style={[
@@ -355,6 +378,11 @@ export default function App() {
               voice.setVoiceKey('').then(() => setVoiceReady(false));
             }}
             onClose={() => setSettingsOpen(false)}
+          />
+
+          <OnboardingModal
+            visible={onboardingVisible}
+            onComplete={completeOnboarding}
           />
         </KeyboardAvoidingView>
       </SafeAreaView>

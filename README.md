@@ -63,4 +63,8 @@ app/
   customers don't need their own API key.
 - **Face tracking** — use the front camera so the eyes literally follow the
   user's face.
+- **Bible reading home** — a "take me home" page for reading scripture
+  inside the app (book/chapter navigation, WEB translation).
 - **Daily verse notifications**, prayer journal, and favorites.
+- **Production launch prep** — streaming voice for lower latency, a
+  backend proxy for API keys, bundled media assets, and store builds.
