@@ -1,3 +1,5 @@
+import { useEvent } from 'expo';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import React, {
   forwardRef,
   useEffect,
@@ -16,11 +18,14 @@ import Svg, {
 } from 'react-native-svg';
 import JesusFace, { JesusFaceHandle } from './JesusFace';
 
-// Realistic 4K portrait generated with OpenArt (Nano Banana 2),
-// re-lit against pure black so it blends into the app background.
-// TODO: bundle this file locally before a store release.
+// Generated with OpenArt against pure black so it blends into the app.
+// The video is the living portrait (breathing, hair in the breeze,
+// blinking, glancing around); the still image is its poster/fallback.
+// TODO: bundle these files locally before a store release.
 export const PORTRAIT_URL =
-  'https://cdn.openart.ai/openart-ai/production/2026-08/create-image/JZMxRtTkpmFe2dgMdSQI/image_1787807278217_1afe6b3c_1787807280459_5703c9a4.png';
+  'https://cdn.openart.ai/openart-ai/production/2026-08/create-image/JZMxRtTkpmFe2dgMdSQI/image_1787807279541_3c4d75bb_1787807280769_4f5443ba.png';
+export const PORTRAIT_VIDEO_URL: string | null =
+  'https://cdn.openart.ai/openart-ai/production/2026-08/create-video/JZMxRtTkpmFe2dgMdSQI/9b6ffee7-751a-4bbd-9683-bbaf834079c4_seed614621533_1787807564537_8e6e1725.mp4';
 
 interface Props {
   width: number;
@@ -30,17 +35,33 @@ interface Props {
 }
 
 /**
- * Full-bleed portrait: fills the screen against pure black, breathes
- * slowly, a heavenly glow pulses (stronger while speaking), and he
- * leans gently toward touch. Falls back to the drawn animated face if
- * the image cannot load (e.g. no internet on first run).
+ * Full-bleed living portrait on pure black. Prefers the looping video
+ * (real breathing, hair, blinks); falls back to the still image with a
+ * code-driven breath, then to the drawn animated face if neither loads.
+ * A heavenly glow pulses over either, brighter while he speaks, and he
+ * leans gently toward touch.
  */
 const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
   { width, height, listening = false, speaking = false },
   ref
 ) {
+  const [videoFailed, setVideoFailed] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const fallbackRef = useRef<JesusFaceHandle>(null);
+
+  const useVideo = !!PORTRAIT_VIDEO_URL && !videoFailed;
+
+  const player = useVideoPlayer(useVideo ? PORTRAIT_VIDEO_URL : null, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
+  const { status } = useEvent(player, 'statusChange', {
+    status: player.status,
+  });
+  useEffect(() => {
+    if (status === 'error') setVideoFailed(true);
+  }, [status]);
 
   const gazeX = useRef(new Animated.Value(0)).current;
   const gazeY = useRef(new Animated.Value(0)).current;
@@ -52,7 +73,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
 
   useImperativeHandle(ref, () => ({
     lookToward: (x: number, y: number) => {
-      if (imageFailed) {
+      if (imageFailed && !useVideo) {
         fallbackRef.current?.lookToward(x, y);
         return;
       }
@@ -74,6 +95,10 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
       ]).start();
       restTimer.current = setTimeout(() => {
         idle.current = true;
+        Animated.parallel([
+          Animated.spring(gazeX, { toValue: 0, useNativeDriver: true }),
+          Animated.spring(gazeY, { toValue: 0, useNativeDriver: true }),
+        ]).start();
       }, 4000);
     },
     rest: () => {
@@ -85,8 +110,10 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
     },
   }));
 
-  // Slow, steady breathing.
+  // Code-driven breathing for the still-image fallback only —
+  // the video breathes on its own.
   useEffect(() => {
+    if (useVideo) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(breath, {
@@ -105,7 +132,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
     );
     loop.start();
     return () => loop.stop();
-  }, [breath]);
+  }, [breath, useVideo]);
 
   // Heavenly glow: soft pulse normally, brighter and faster while speaking.
   useEffect(() => {
@@ -131,29 +158,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
     return () => loop.stop();
   }, [speaking, listening, glow]);
 
-  // Gentle idle drift, as if quietly attentive.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!idle.current) return;
-      Animated.parallel([
-        Animated.timing(gazeX, {
-          toValue: (Math.random() - 0.5) * 0.5,
-          duration: 2200,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(gazeY, {
-          toValue: (Math.random() - 0.5) * 0.3,
-          duration: 2200,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, 4200);
-    return () => clearInterval(interval);
-  }, [gazeX, gazeY]);
-
-  if (imageFailed) {
+  if (imageFailed && !useVideo) {
     return (
       <View style={[styles.fallbackWrap, { width, height }]}>
         <JesusFace
@@ -185,20 +190,31 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
         style={[
           StyleSheet.absoluteFill,
           {
-            transform: [
-              { translateX: leanX },
-              { translateY: leanY },
-              { scale: breathScale },
-            ],
+            transform: useVideo
+              ? [{ translateX: leanX }, { translateY: leanY }, { scale: 1.03 }]
+              : [
+                  { translateX: leanX },
+                  { translateY: leanY },
+                  { scale: breathScale },
+                ],
           },
         ]}
       >
-        <Image
-          source={{ uri: PORTRAIT_URL }}
-          style={styles.portrait}
-          resizeMode="cover"
-          onError={() => setImageFailed(true)}
-        />
+        {useVideo ? (
+          <VideoView
+            player={player}
+            style={styles.portrait}
+            contentFit="cover"
+            nativeControls={false}
+          />
+        ) : (
+          <Image
+            source={{ uri: PORTRAIT_URL }}
+            style={styles.portrait}
+            resizeMode="cover"
+            onError={() => setImageFailed(true)}
+          />
+        )}
       </Animated.View>
 
       {/* Heavenly glow above the face, pulsing */}
