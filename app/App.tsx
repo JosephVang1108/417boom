@@ -14,7 +14,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native';
-import JesusFace, { JesusFaceHandle } from './src/components/JesusFace';
+import { JesusFaceHandle } from './src/components/JesusFace';
+import JesusPortrait from './src/components/JesusPortrait';
 import SettingsModal from './src/components/SettingsModal';
 import {
   aiRespond,
@@ -155,7 +156,7 @@ export default function App() {
             }
             {...pan.panHandlers}
           >
-            <JesusFace
+            <JesusPortrait
               ref={faceRef}
               size={FACE_SIZE}
               speaking={speaking}
