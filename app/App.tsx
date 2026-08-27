@@ -3,6 +3,7 @@ import {
   RecordingPresets,
   setAudioModeAsync,
   useAudioRecorder,
+  useAudioRecorderState,
 } from 'expo-audio';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
@@ -74,7 +75,17 @@ export default function App() {
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [bibleOpen, setBibleOpen] = useState(false);
 
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorder = useAudioRecorder({
+    ...RecordingPresets.HIGH_QUALITY,
+    isMeteringEnabled: true, // powers the go-quiet auto-stop
+  });
+  const recorderState = useAudioRecorderState(recorder, 150);
+
+  // Conversational mic: press to open, speak freely, and it sends by
+  // itself after ~2s of quiet (or tap again to send immediately).
+  const heardSpeech = useRef(false);
+  const lastLoudAt = useRef(0);
+  const micOpenedAt = useRef(0);
 
   // ---- Idle encouragement: after a quiet stretch with the app open,
   // he says something kind, unprompted. Grows less frequent over time.
@@ -180,7 +191,7 @@ export default function App() {
     setPraying(false);
   };
 
-  // Hold the mic, speak, release — like a walkie-talkie.
+  // Press the mic to open it; it stays listening after you let go.
   const startTalking = async () => {
     markActive();
     if (recording || transcribing) return;
@@ -198,12 +209,33 @@ export default function App() {
     }
     voice.stop();
     setSpeaking(false);
+    heardSpeech.current = false;
+    lastLoudAt.current = 0;
+    micOpenedAt.current = Date.now();
     await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
     await recorder.prepareToRecordAsync();
     recorder.record();
     setRecording(true);
     setListening(true);
   };
+
+  // Watch the mic level: once they've spoken, ~2s of quiet sends the
+  // message; if they never speak, the mic closes itself after 10s.
+  useEffect(() => {
+    if (!recording) return;
+    const level = recorderState.metering;
+    if (typeof level !== 'number') return; // metering unavailable — manual stop
+    const now = Date.now();
+    if (level > -38) {
+      heardSpeech.current = true;
+      lastLoudAt.current = now;
+    } else if (heardSpeech.current && now - lastLoudAt.current > 2000) {
+      stopTalking();
+    } else if (!heardSpeech.current && now - micOpenedAt.current > 10_000) {
+      stopTalking();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recorderState.metering, recording]);
 
   const stopTalking = async () => {
     if (!recording) return;
@@ -221,12 +253,13 @@ export default function App() {
         await send(result.text);
       } else if (result.problem === 'network') {
         Alert.alert('No connection', 'Please check your internet and try again.');
-      } else {
+      } else if (heardSpeech.current) {
         Alert.alert(
           "I couldn't hear that",
-          'Hold the mic while you speak, and release when you’re done.'
+          'Please try again, a little closer to the phone.'
         );
       }
+      // Mic closed without speech — no alert, they just changed their mind.
     } finally {
       setTranscribing(false);
       setListening(false);
@@ -381,15 +414,17 @@ export default function App() {
 
           <View style={styles.inputBar}>
             <Pressable
-              onPressIn={startTalking}
-              onPressOut={stopTalking}
+              onPressIn={() => {
+                if (recording) stopTalking();
+                else startTalking();
+              }}
               style={({ pressed }) => [
                 styles.micButton,
                 recording && styles.micRecording,
                 pressed && styles.sendPressed,
               ]}
             >
-              <Text style={styles.micText}>🎤</Text>
+              <Text style={styles.micText}>{recording ? '■' : '🎤'}</Text>
             </Pressable>
             <TextInput
               style={styles.input}
@@ -400,10 +435,10 @@ export default function App() {
               onSubmitEditing={() => send()}
               placeholder={
                 recording
-                  ? 'Listening… release to send'
+                  ? 'Listening… just talk, pause when done'
                   : transcribing
                     ? 'Understanding…'
-                    : 'Hold 🎤 to talk, or type…'
+                    : 'Tap 🎤 and talk, or type…'
               }
               placeholderTextColor={recording ? '#C8A45C' : '#7A7A72'}
               returnKeyType="send"
