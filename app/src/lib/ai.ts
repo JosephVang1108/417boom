@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { z } from 'zod';
 import { BACKEND_TOKEN, BACKEND_URL, backendConfigured } from './config';
 import { GuideResponse } from './guide';
+import { recentPrayersForPrompt } from './journal';
 import { getAbout, getName } from './profile';
 
 const KEY_STORAGE = 'anthropic_api_key';
@@ -43,6 +44,10 @@ function systemPrompt(): string {
   }
   if (about) {
     prompt += `\nWhat they shared about themselves when they first arrived: "${about}". Hold this with care and let it quietly inform how you speak with them.`;
+  }
+  const prayers = recentPrayersForPrompt();
+  if (prayers) {
+    prompt += `\n\nPrayers you have prayed with them recently:\n${prayers}\nWhen a day or more has passed since one of these, gently ask ONCE how it's going — a shepherd remembers. Don't repeat the question if they've already told you.`;
   }
   return prompt;
 }
