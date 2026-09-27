@@ -140,10 +140,43 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
   const turnTargetRef = useRef<Pose>('center');
   const transitioningRef = useRef(false);
   const turnDisabledRef = useRef(false);
+  const turnIdRef = useRef(0);
+  const turnFailuresRef = useRef(0);
+  const turnWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zoneRef = useRef<Pose>('center');
   const zoneSinceRef = useRef(0);
   const flagsRef = useRef({ speaking, praying });
   flagsRef.current = { speaking, praying };
+
+  const clearTurnTimers = () => {
+    if (turnWatchdogRef.current) {
+      clearTimeout(turnWatchdogRef.current);
+      turnWatchdogRef.current = null;
+    }
+    if (recenterTimerRef.current) {
+      clearTimeout(recenterTimerRef.current);
+      recenterTimerRef.current = null;
+    }
+  };
+  useEffect(() => clearTurnTimers, []);
+
+  // Bail out of a turn that stalled or errored: fade back to the living
+  // center loop so he is never left frozen. Three failed turns in a row
+  // (bad network, bad clip) switch turning off for the session.
+  const abortTurn = () => {
+    turnFailuresRef.current += 1;
+    if (turnFailuresRef.current >= 3) turnDisabledRef.current = true;
+    transitioningRef.current = false;
+    poseRef.current = 'center';
+    turnTargetRef.current = 'center';
+    turnPlayer.pause();
+    Animated.timing(turnOpacity, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  };
 
   const startTurn = (dest: Pose) => {
     if (turnDisabledRef.current || transitioningRef.current) return;
@@ -156,9 +189,17 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
         : TURN_CLIPS[poseRef.current as 'left' | 'right'].back;
     transitioningRef.current = true;
     turnTargetRef.current = target;
+    const id = ++turnIdRef.current;
+    clearTurnTimers();
+    // Watchdog: streamed clips can stall and then 'playToEnd' never
+    // fires; without this he would freeze mid-turn forever.
+    turnWatchdogRef.current = setTimeout(() => {
+      if (turnIdRef.current === id && transitioningRef.current) abortTurn();
+    }, 9000);
     turnPlayer
       .replaceAsync(clip)
       .then(() => {
+        if (turnIdRef.current !== id || !transitioningRef.current) return;
         turnPlayer.play();
         Animated.timing(turnOpacity, {
           toValue: 1,
@@ -167,17 +208,14 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
         }).start();
       })
       .catch(() => {
-        transitioningRef.current = false;
-        turnDisabledRef.current = true;
-        Animated.timing(turnOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
+        if (turnIdRef.current !== id || !transitioningRef.current) return;
+        abortTurn();
       });
   };
 
   useEventListener(turnPlayer, 'playToEnd', () => {
+    clearTurnTimers();
+    turnFailuresRef.current = 0;
     poseRef.current = turnTargetRef.current;
     transitioningRef.current = false;
     if (poseRef.current === 'center') {
@@ -186,9 +224,25 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
         duration: 200,
         useNativeDriver: true,
       }).start();
+    } else {
+      // Holding a side pose shows the clip's final frame, which is
+      // static — return to the living center loop on his own after a
+      // few seconds even if the gaze never re-centers.
+      recenterTimerRef.current = setTimeout(() => {
+        if (poseRef.current !== 'center' && !transitioningRef.current) {
+          startTurn('center');
+        }
+      }, 7000);
     }
     // If the gaze is still held to a side, the next gaze update chains
     // the follow-up turn.
+  });
+
+  useEventListener(turnPlayer, 'statusChange', ({ status: turnStatus }) => {
+    if (turnStatus === 'error' && transitioningRef.current) {
+      clearTurnTimers();
+      abortTurn();
+    }
   });
 
   // He faces forward whenever he speaks or prays.
