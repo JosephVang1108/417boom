@@ -26,7 +26,7 @@ const {
   APP_TOKEN,
   ANTHROPIC_API_KEY,
   ELEVENLABS_API_KEY,
-  VOICE_ID = 'pdNm5Q6lQvK6VrviGGq1',
+  VOICE_ID = 'R9YQn8ytiYIfkeIr8wyN',
   PORT = 8787,
 } = process.env;
 
