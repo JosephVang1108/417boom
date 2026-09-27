@@ -10,7 +10,7 @@ const VOICE_ID_STORAGE = 'elevenlabs_voice_id';
 // The "Abide" voice — designed with ElevenLabs Voice Design: deep,
 // soft-spoken, ancient yet kind. Falls back to "Brian" (deep, calm)
 // for accounts that don't have it.
-const ELEVEN_VOICE_ID = 'pdNm5Q6lQvK6VrviGGq1';
+const ELEVEN_VOICE_ID = 'R9YQn8ytiYIfkeIr8wyN';
 const ELEVEN_FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb';
 
 // One engine for every reply so accent and pacing never shift between
