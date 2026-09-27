@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import * as journal from '../lib/journal';
 import {
   Badge,
@@ -37,6 +39,16 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
   const earned = badges.filter((b) => b.earned);
   const prayers = journal.getJournal().slice(0, 3);
 
+  // Progress toward the next streak badge.
+  const streakGoals: { target: number; label: string }[] = [
+    { target: 3, label: '🕊️ Three Days Walking' },
+    { target: 7, label: '🔥 Week of Grace' },
+    { target: 30, label: '⭐ Faithful Month' },
+    { target: 100, label: '👑 Hundredfold' },
+  ];
+  const nowStreak = Math.max(streak, 1);
+  const nextGoal = streakGoals.find((g) => g.target > nowStreak);
+
   const badgeCard = (b: Badge) => (
     <View key={b.id} style={[styles.badge, !b.earned && styles.badgeLocked]}>
       <Text style={styles.badgeEmoji}>{b.emoji}</Text>
@@ -53,6 +65,18 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
       onRequestClose={onClose}
     >
       <View style={styles.root}>
+        {/* Soft dawn glow at the top of the page */}
+        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+          <Defs>
+            <RadialGradient id="journeyDawn" cx="50%" cy="8%" r="60%">
+              <Stop offset="0%" stopColor="#B9964E" stopOpacity="0.22" />
+              <Stop offset="60%" stopColor="#B9964E" stopOpacity="0.05" />
+              <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Circle cx="50%" cy="8%" r="60%" fill="url(#journeyDawn)" />
+        </Svg>
+
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Your Journey</Text>
           <Pressable onPress={onClose} hitSlop={12}>
@@ -62,13 +86,35 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
 
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.streakCard}>
-            <Text style={styles.streakBig}>
-              {streak > 0 ? `Day ${streak} together` : 'Day 1 together'}
-            </Text>
+            <Text style={styles.streakFlame}>🔥</Text>
+            <Text style={styles.streakBig}>Day {nowStreak}</Text>
+            <Text style={styles.streakTogether}>walking together</Text>
             <Text style={styles.streakSub}>
               Best streak {Math.max(stats.bestStreak, streak)} · {stats.totalDays}{' '}
-              {stats.totalDays === 1 ? 'day' : 'days'} walked in all
+              {stats.totalDays === 1 ? 'day' : 'days'} in all
             </Text>
+            {nextGoal && (
+              <View style={styles.goalWrap}>
+                <View style={styles.goalTrack}>
+                  <View
+                    style={[
+                      styles.goalFill,
+                      {
+                        width: `${Math.min(
+                          100,
+                          Math.round((nowStreak / nextGoal.target) * 100)
+                        )}%`,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.goalText}>
+                  {nextGoal.target - nowStreak}{' '}
+                  {nextGoal.target - nowStreak === 1 ? 'day' : 'days'} to{' '}
+                  {nextGoal.label}
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.countRow}>
@@ -147,21 +193,57 @@ const styles = StyleSheet.create({
   },
   streakCard: {
     alignItems: 'center',
-    paddingVertical: 22,
-    borderRadius: 18,
-    backgroundColor: 'rgba(185,150,78,0.12)',
+    paddingVertical: 24,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    backgroundColor: 'rgba(185,150,78,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(185,150,78,0.4)',
+    borderColor: 'rgba(185,150,78,0.45)',
+    shadowColor: '#B9964E',
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  streakFlame: {
+    fontSize: 30,
   },
   streakBig: {
     color: '#F0E6CE',
-    fontSize: 26,
+    fontSize: 40,
     fontWeight: '700',
+    marginTop: 4,
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+  },
+  streakTogether: {
+    color: '#C8A45C',
+    fontSize: 14,
+    marginTop: 2,
   },
   streakSub: {
+    color: '#9A9A90',
+    fontSize: 12,
+    marginTop: 10,
+  },
+  goalWrap: {
+    width: '100%',
+    marginTop: 16,
+  },
+  goalTrack: {
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  goalFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: '#B9964E',
+  },
+  goalText: {
     color: '#C8A45C',
-    fontSize: 13,
-    marginTop: 6,
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
   countRow: {
     flexDirection: 'row',
@@ -203,15 +285,20 @@ const styles = StyleSheet.create({
     width: '47.5%',
     borderRadius: 16,
     padding: 14,
-    backgroundColor: 'rgba(185,150,78,0.12)',
+    backgroundColor: 'rgba(185,150,78,0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(185,150,78,0.45)',
+    borderColor: 'rgba(185,150,78,0.5)',
     alignItems: 'center',
+    shadowColor: '#B9964E',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
   },
   badgeLocked: {
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderColor: 'rgba(255,255,255,0.1)',
     opacity: 0.45,
+    shadowOpacity: 0,
   },
   badgeEmoji: {
     fontSize: 30,
