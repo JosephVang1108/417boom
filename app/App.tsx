@@ -40,6 +40,8 @@ import { backendConfigured } from './src/lib/config';
 import * as dailyVerse from './src/lib/dailyVerse';
 import * as journal from './src/lib/journal';
 import { touchStreak } from './src/lib/streak';
+import * as stats from './src/lib/stats';
+import JourneyScreen from './src/components/JourneyScreen';
 import {
   displayText,
   encouragement,
@@ -79,6 +81,7 @@ export default function App() {
   const [voiceId, setVoiceId] = useState('');
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [bibleOpen, setBibleOpen] = useState(false);
+  const [journeyOpen, setJourneyOpen] = useState(false);
   const [streak, setStreak] = useState(0);
   const [verseEnabled, setVerseEnabled] = useState(false);
 
@@ -106,6 +109,7 @@ export default function App() {
       transcribing ||
       settingsOpen ||
       bibleOpen ||
+      journeyOpen ||
       onboardingVisible ||
       history.length === 0,
     voiceOn,
@@ -168,7 +172,10 @@ export default function App() {
       setUserName(name ?? '');
       if (!onboarded) setOnboardingVisible(true);
     });
-    touchStreak().then(setStreak);
+    touchStreak().then((s) => {
+      setStreak(s);
+      stats.recordOpen(s);
+    });
     journal.loadJournal();
     dailyVerse.isDailyVerseEnabled().then((on) => {
       setVerseEnabled(on);
@@ -382,7 +389,11 @@ export default function App() {
     if (needHatePrayer) hateStrikes.current = 0;
 
     setHistory((h) => h.map((ex) => (ex.id === id ? { ...ex, response } : ex)));
-    if (response.isPrayer && !needHatePrayer) journal.addPrayer(shown);
+    if (response.isPrayer && !needHatePrayer) {
+      journal.addPrayer(shown);
+      stats.bump('prayers');
+    }
+    if (response.isStory) stats.bump('stories');
     if (voiceOn) speak(response);
   };
 
@@ -438,18 +449,29 @@ export default function App() {
             </View>
             <View style={styles.headerActions}>
               <Pressable
+                style={styles.headerPill}
                 onPress={() => {
                   markActive();
                   setBibleOpen(true);
                 }}
-                hitSlop={12}
+                hitSlop={8}
               >
-                <Text style={styles.voiceToggle}>📖</Text>
+                <Text style={styles.headerPillText}>📖 Bible</Text>
               </Pressable>
-              <Pressable onPress={toggleVoice} hitSlop={12}>
+              <Pressable
+                style={styles.headerPill}
+                onPress={() => {
+                  markActive();
+                  setJourneyOpen(true);
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.headerPillText}>✨ Journey</Text>
+              </Pressable>
+              <Pressable onPress={toggleVoice} hitSlop={14}>
                 <Text style={styles.voiceToggle}>{voiceOn ? '🔊' : '🔇'}</Text>
               </Pressable>
-              <Pressable onPress={() => setSettingsOpen(true)} hitSlop={12}>
+              <Pressable onPress={() => setSettingsOpen(true)} hitSlop={14}>
                 <Text style={styles.voiceToggle}>⚙️</Text>
               </Pressable>
             </View>
@@ -605,6 +627,15 @@ export default function App() {
             onComplete={completeOnboarding}
           />
 
+          <JourneyScreen
+            visible={journeyOpen}
+            streak={streak}
+            onClose={() => {
+              markActive();
+              setJourneyOpen(false);
+            }}
+          />
+
           <BibleScreen
             visible={bibleOpen}
             onClose={() => {
@@ -667,10 +698,23 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 18,
+    gap: 10,
+  },
+  headerPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(185,150,78,0.55)',
+  },
+  headerPillText: {
+    color: '#F0E6CE',
+    fontSize: 13,
+    fontWeight: '600',
   },
   voiceToggle: {
-    fontSize: 16,
+    fontSize: 20,
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowRadius: 6,
   },
