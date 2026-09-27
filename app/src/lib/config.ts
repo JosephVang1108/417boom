@@ -11,3 +11,11 @@ export const BACKEND_TOKEN: string | null =
 export function backendConfigured(): boolean {
   return !!(BACKEND_URL && BACKEND_TOKEN);
 }
+
+// Premium gate. False = free tier: one full story (David & Goliath),
+// everything else gets a warm taste + invitation. Becomes a real
+// subscription check in the store build.
+export const PREMIUM_UNLOCKED = false;
+
+/** The one story free-tier listeners get in full. */
+export const FREE_STORY = 'David and Goliath';

@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { recentMornings } from '../lib/dailyVerse';
 import * as journal from '../lib/journal';
 import {
   Badge,
@@ -25,7 +26,7 @@ interface Props {
   streak: number;
   onClose: () => void;
   onOpenBible: () => void;
-  onOpenDevotional: () => void;
+  onOpenDevotional: (date?: Date) => void;
   onTellStory: (ask: string) => void;
 }
 
@@ -92,8 +93,8 @@ export default function JourneyScreen({
       return;
     }
     Alert.alert(
-      'A Premium story',
-      'All the stories unlock with Premium when we launch. David & Goliath is yours free today — or simply ask him for any story out loud.'
+      'This telling is waiting for you',
+      'The full stories live in Abide Premium — that’s what keeps this place open and growing. David & Goliath is yours anytime, and he’d love to tell it.'
     );
   };
 
@@ -167,7 +168,10 @@ export default function JourneyScreen({
           </Pressable>
 
           {/* Today's devotional, anytime */}
-          <Pressable style={styles.wordButton} onPress={onOpenDevotional}>
+          <Pressable
+            style={styles.wordButton}
+            onPress={() => onOpenDevotional()}
+          >
             <Medallion
               uri={'https://g.tlcdn.com/gen/3785b1ad19964d7c8f776b37b08906f7.jpg'}
               size={26}
@@ -243,6 +247,29 @@ export default function JourneyScreen({
               {badges.map(badgeCard)}
             </ScrollView>
           )}
+
+          {/* Mornings worth returning to */}
+          <Text style={styles.sectionTitle}>Past mornings</Text>
+          <View style={styles.groupCardLike}>
+            {recentMornings(7).map((m, i) => (
+              <Pressable
+                key={m.date.toDateString()}
+                style={[styles.morningRow, i < 6 && styles.morningRowLine]}
+                onPress={() => onOpenDevotional(m.date)}
+              >
+                <Text style={styles.morningDay}>
+                  {i === 0
+                    ? 'Today'
+                    : m.date.toLocaleDateString(undefined, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                </Text>
+                <Text style={styles.morningRef}>{m.verse.ref}</Text>
+              </Pressable>
+            ))}
+          </View>
 
           {/* Prayers being carried */}
           {prayers.length > 0 && (
@@ -529,6 +556,34 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 3,
     textAlign: 'center',
+  },
+  groupCardLike: {
+    backgroundColor: CARD,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: EDGE,
+    overflow: 'hidden',
+  },
+  morningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  morningRowLine: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(217,199,161,0.5)',
+  },
+  morningDay: {
+    color: INK,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  morningRef: {
+    color: INK_SOFT,
+    fontSize: 13,
+    fontFamily: SERIF,
   },
   prayerCard: {
     borderRadius: 14,

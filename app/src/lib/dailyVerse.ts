@@ -32,10 +32,31 @@ const DAILY_VERSES: DailyVerse[] = [
   { ref: 'Psalm 34:18', text: 'Yahweh is near to those who have a broken heart.', meaning: 'When your heart breaks, God doesn’t step back — He moves closer. You are nearest to Him in the very place it hurts.' },
 ];
 
-/** Today's verse + reflection (same pick as the 8AM notification). */
+/** The verse + reflection for a given day (same pick as the 8AM
+ * notification uses for that date), so past mornings stay reachable. */
+export function getDevotionalFor(date: Date): DailyVerse {
+  return DAILY_VERSES[
+    (date.getDate() + date.getMonth()) % DAILY_VERSES.length
+  ];
+}
+
+/** Today's verse + reflection. */
 export function getTodaysDevotional(): DailyVerse {
-  const now = new Date();
-  return DAILY_VERSES[(now.getDate() + now.getMonth()) % DAILY_VERSES.length];
+  return getDevotionalFor(new Date());
+}
+
+/** The last `days` mornings, today first — for revisiting a morning
+ * word that meant something. */
+export function recentMornings(
+  days: number
+): { date: Date; verse: DailyVerse }[] {
+  const out: { date: Date; verse: DailyVerse }[] = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    out.push({ date: d, verse: getDevotionalFor(d) });
+  }
+  return out;
 }
 
 /** True when the morning devotional hasn't been shown yet today. */

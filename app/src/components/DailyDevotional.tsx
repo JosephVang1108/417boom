@@ -10,13 +10,15 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import { DailyVerse, getTodaysDevotional } from '../lib/dailyVerse';
+import { DailyVerse, getDevotionalFor } from '../lib/dailyVerse';
 import { MEDALLIONS } from '../lib/stats';
 import Medallion from './Medallion';
 
 interface Props {
   visible: boolean;
   streak: number;
+  /** Which morning to show — defaults to today. */
+  forDate?: Date | null;
   onDone: () => void;
 }
 
@@ -27,7 +29,12 @@ const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' });
  * Amen. Saying Amen blooms a golden ring and celebrates the streak,
  * then returns to him. Shown once per day.
  */
-export default function DailyDevotional({ visible, streak, onDone }: Props) {
+export default function DailyDevotional({
+  visible,
+  streak,
+  forDate,
+  onDone,
+}: Props) {
   const [devotional, setDevotional] = useState<DailyVerse | null>(null);
   const [celebrating, setCelebrating] = useState(false);
 
@@ -39,7 +46,7 @@ export default function DailyDevotional({ visible, streak, onDone }: Props) {
 
   useEffect(() => {
     if (visible) {
-      setDevotional(getTodaysDevotional());
+      setDevotional(getDevotionalFor(forDate ?? new Date()));
       setCelebrating(false);
       enter.setValue(0);
       Animated.timing(enter, {
@@ -87,7 +94,7 @@ export default function DailyDevotional({ visible, streak, onDone }: Props) {
 
   if (!devotional) return null;
 
-  const today = new Date().toLocaleDateString(undefined, {
+  const today = (forDate ?? new Date()).toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
