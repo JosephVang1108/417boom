@@ -1,4 +1,4 @@
-import { useEvent, useEventListener } from 'expo';
+import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import React, {
   forwardRef,
@@ -34,27 +34,6 @@ export const PRAYING_URL =
   'https://galaxy-prod.tlcdn.com/gen/6a7bd948424440198d0ea1eb0ab950ca.png';
 export const PRAYING_VIDEO_URL: string | null =
   'https://galaxy-prod.tlcdn.com/gen/c40483a9d15140b4a6997c3a9190a631.mp4';
-
-// Real head turns: 4s clips pinned to exact start/end frames so they
-// chain seamlessly with the center loop. 'go' turns away from center,
-// 'back' returns to center.
-const TURN_CLIPS = {
-  left: {
-    go: 'https://g.tlcdn.com/gen/2c35f43b20614618a6df8424dce2761e.mp4',
-    back: 'https://g.tlcdn.com/gen/c36abfc605874e88b389009f96dc3605.mp4',
-  },
-  right: {
-    go: 'https://g.tlcdn.com/gen/dc2ec7ec9b46464b825df9c71fa4a0ef.mp4',
-    back: 'https://g.tlcdn.com/gen/e2aaa43ad04d4f42963b55e2c6ebb964.mp4',
-  },
-} as const;
-
-// Turn clips read as slow motion at natural speed; play them faster.
-const TURN_SPEED = 1.6;
-// How long he holds the turned pose before glancing back.
-const TURN_HOLD_MS = 1200;
-// Breather between glances so he doesn't whip around constantly.
-const GLANCE_COOLDOWN_MS = 4000;
 
 interface Props {
   width: number;
@@ -132,184 +111,6 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
     }
   }, [praying, prayOpacity, prayPlayer]);
 
-  // ---- Real head turns -------------------------------------------------
-  // A sustained lean of the phone triggers one quick "glance": the
-  // turn-away clip plays (sped up to natural pace), he holds the pose a
-  // beat, then the return clip — preloaded in a second player while the
-  // first was playing — brings him back with no network wait. The whole
-  // glance is one self-completing sequence, so he can never be left
-  // stuck facing sideways.
-  const goPlayer = useVideoPlayer(null, (p) => {
-    p.loop = false;
-    p.muted = true;
-    p.playbackRate = TURN_SPEED;
-  });
-  const backPlayer = useVideoPlayer(null, (p) => {
-    p.loop = false;
-    p.muted = true;
-    p.playbackRate = TURN_SPEED;
-  });
-  const turnOpacity = useRef(new Animated.Value(0)).current;
-  const goOpacity = useRef(new Animated.Value(1)).current;
-  const backOpacity = useRef(new Animated.Value(0)).current;
-  const phaseRef = useRef<'idle' | 'go' | 'hold' | 'awaitBack' | 'back'>(
-    'idle'
-  );
-  const glanceIdRef = useRef(0);
-  const glanceEndedAtRef = useRef(0);
-  const backReadyRef = useRef(false);
-  const turnDisabledRef = useRef(false);
-  const turnFailuresRef = useRef(0);
-  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const zoneRef = useRef<'left' | 'right' | 'center'>('center');
-  const zoneSinceRef = useRef(0);
-  const flagsRef = useRef({ speaking, praying });
-  flagsRef.current = { speaking, praying };
-
-  const clearTurnTimers = () => {
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-    if (watchdogRef.current) {
-      clearTimeout(watchdogRef.current);
-      watchdogRef.current = null;
-    }
-  };
-  useEffect(() => clearTurnTimers, []);
-
-  // End of a glance — clean or failed. On failure he simply fades back
-  // to the living center loop; three failures in a row (bad network)
-  // switch glances off for the session.
-  const finishGlance = (failed: boolean) => {
-    clearTurnTimers();
-    if (failed) {
-      turnFailuresRef.current += 1;
-      if (turnFailuresRef.current >= 3) turnDisabledRef.current = true;
-    } else {
-      turnFailuresRef.current = 0;
-    }
-    phaseRef.current = 'idle';
-    glanceEndedAtRef.current = Date.now();
-    goPlayer.pause();
-    backPlayer.pause();
-    Animated.timing(turnOpacity, {
-      toValue: 0,
-      duration: failed ? 300 : 500,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const playBack = () => {
-    phaseRef.current = 'back';
-    // The go clip's last frame equals the back clip's first frame, so
-    // an instant swap between the two players is invisible.
-    backOpacity.setValue(1);
-    goOpacity.setValue(0);
-    backPlayer.play();
-  };
-
-  const requestBack = () => {
-    if (backReadyRef.current) playBack();
-    else phaseRef.current = 'awaitBack'; // plays the moment it loads
-  };
-
-  const startGlance = (dir: 'left' | 'right') => {
-    if (turnDisabledRef.current || phaseRef.current !== 'idle' || !useVideo)
-      return;
-    if (flagsRef.current.speaking || flagsRef.current.praying) return;
-    if (Date.now() - glanceEndedAtRef.current < GLANCE_COOLDOWN_MS) return;
-    const id = ++glanceIdRef.current;
-    phaseRef.current = 'go';
-    backReadyRef.current = false;
-    goOpacity.setValue(1);
-    backOpacity.setValue(0);
-    // Watchdog: a stalled stream must never leave him stuck sideways.
-    watchdogRef.current = setTimeout(() => {
-      if (glanceIdRef.current === id && phaseRef.current !== 'idle') {
-        finishGlance(true);
-      }
-    }, 14000);
-    goPlayer
-      .replaceAsync(TURN_CLIPS[dir].go)
-      .then(() => {
-        if (glanceIdRef.current !== id || phaseRef.current !== 'go') return;
-        goPlayer.play();
-        Animated.timing(turnOpacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
-      })
-      .catch(() => {
-        if (glanceIdRef.current === id && phaseRef.current !== 'idle') {
-          finishGlance(true);
-        }
-      });
-    // Preload the return clip while the turn-away clip plays, so the
-    // way back never waits on the network.
-    backPlayer
-      .replaceAsync(TURN_CLIPS[dir].back)
-      .then(() => {
-        if (glanceIdRef.current !== id) return;
-        backReadyRef.current = true;
-        if (phaseRef.current === 'awaitBack') playBack();
-      })
-      .catch(() => {
-        if (glanceIdRef.current === id && phaseRef.current !== 'idle') {
-          finishGlance(true);
-        }
-      });
-  };
-
-  useEventListener(goPlayer, 'playToEnd', () => {
-    if (phaseRef.current !== 'go') return;
-    phaseRef.current = 'hold';
-    const hold =
-      flagsRef.current.speaking || flagsRef.current.praying ? 0 : TURN_HOLD_MS;
-    holdTimerRef.current = setTimeout(() => {
-      if (phaseRef.current === 'hold') requestBack();
-    }, hold);
-  });
-
-  useEventListener(backPlayer, 'playToEnd', () => {
-    if (phaseRef.current === 'back') finishGlance(false);
-  });
-
-  useEventListener(goPlayer, 'statusChange', ({ status: s }) => {
-    if (s === 'error' && phaseRef.current !== 'idle') finishGlance(true);
-  });
-  useEventListener(backPlayer, 'statusChange', ({ status: s }) => {
-    if (s === 'error' && phaseRef.current !== 'idle') finishGlance(true);
-  });
-
-  // If he starts speaking or praying mid-glance, cut the hold short and
-  // come back to face forward right away.
-  useEffect(() => {
-    if ((speaking || praying) && phaseRef.current === 'hold') {
-      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-      requestBack();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speaking, praying]);
-
-  const evaluateGaze = (x: number) => {
-    const zone: 'left' | 'right' | null =
-      x < -0.55 ? 'left' : x > 0.55 ? 'right' : null;
-    if (!zone) {
-      zoneRef.current = 'center';
-      return;
-    }
-    const now = Date.now();
-    if (zone !== zoneRef.current) {
-      zoneRef.current = zone;
-      zoneSinceRef.current = now;
-      return;
-    }
-    if (now - zoneSinceRef.current > 350) startGlance(zone);
-  };
-
   const gazeX = useRef(new Animated.Value(0)).current;
   const gazeY = useRef(new Animated.Value(0)).current;
   const breath = useRef(new Animated.Value(0)).current;
@@ -326,7 +127,6 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
       }
       idle.current = false;
       if (restTimer.current) clearTimeout(restTimer.current);
-      evaluateGaze(Math.max(-1, Math.min(1, x)));
       Animated.parallel([
         Animated.spring(gazeX, {
           toValue: Math.max(-1, Math.min(1, x)),
@@ -470,37 +270,6 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
             onError={() => setImageFailed(true)}
           />
         </Animated.View>
-
-        {/* Head glances: the turn-away and turn-back clips live in two
-            players so the return is preloaded; their shared boundary
-            frame makes the swap between them invisible. */}
-        {useVideo && (
-          <Animated.View
-            style={[StyleSheet.absoluteFill, { opacity: turnOpacity }]}
-            pointerEvents="none"
-          >
-            <Animated.View
-              style={[StyleSheet.absoluteFill, { opacity: goOpacity }]}
-            >
-              <VideoView
-                player={goPlayer}
-                style={styles.portrait}
-                contentFit="cover"
-                nativeControls={false}
-              />
-            </Animated.View>
-            <Animated.View
-              style={[StyleSheet.absoluteFill, { opacity: backOpacity }]}
-            >
-              <VideoView
-                player={backPlayer}
-                style={styles.portrait}
-                contentFit="cover"
-                nativeControls={false}
-              />
-            </Animated.View>
-          </Animated.View>
-        )}
 
         {/* Praying: eyes closed, head bowed — fades in while he prays. */}
         <Animated.View
