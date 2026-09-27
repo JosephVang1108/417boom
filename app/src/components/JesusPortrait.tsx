@@ -1,4 +1,4 @@
-import { useEvent } from 'expo';
+import { useEvent, useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import React, {
   forwardRef,
@@ -34,6 +34,22 @@ export const PRAYING_URL =
   'https://galaxy-prod.tlcdn.com/gen/6a7bd948424440198d0ea1eb0ab950ca.png';
 export const PRAYING_VIDEO_URL: string | null =
   'https://galaxy-prod.tlcdn.com/gen/c40483a9d15140b4a6997c3a9190a631.mp4';
+
+// Real head turns: 4s clips pinned to exact start/end frames so they
+// chain seamlessly with the center loop. 'go' turns away from center,
+// 'back' returns to center.
+const TURN_CLIPS = {
+  left: {
+    go: 'https://g.tlcdn.com/gen/2c35f43b20614618a6df8424dce2761e.mp4',
+    back: 'https://g.tlcdn.com/gen/c36abfc605874e88b389009f96dc3605.mp4',
+  },
+  right: {
+    go: 'https://g.tlcdn.com/gen/dc2ec7ec9b46464b825df9c71fa4a0ef.mp4',
+    back: 'https://g.tlcdn.com/gen/e2aaa43ad04d4f42963b55e2c6ebb964.mp4',
+  },
+} as const;
+
+type Pose = 'center' | 'left' | 'right';
 
 interface Props {
   width: number;
@@ -111,6 +127,100 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
     }
   }, [praying, prayOpacity, prayPlayer]);
 
+  // ---- Real head turns -------------------------------------------------
+  // When the gaze pushes far left/right and holds, play the matching turn
+  // clip, hold the turned pose on its final frame, and turn back when the
+  // gaze returns to center. While speaking or praying he faces forward.
+  const turnPlayer = useVideoPlayer(null, (p) => {
+    p.loop = false;
+    p.muted = true;
+  });
+  const turnOpacity = useRef(new Animated.Value(0)).current;
+  const poseRef = useRef<Pose>('center');
+  const turnTargetRef = useRef<Pose>('center');
+  const transitioningRef = useRef(false);
+  const turnDisabledRef = useRef(false);
+  const zoneRef = useRef<Pose>('center');
+  const zoneSinceRef = useRef(0);
+  const flagsRef = useRef({ speaking, praying });
+  flagsRef.current = { speaking, praying };
+
+  const startTurn = (dest: Pose) => {
+    if (turnDisabledRef.current || transitioningRef.current) return;
+    if (poseRef.current === dest) return;
+    // A side-to-side change routes through center first.
+    const target: Pose = poseRef.current === 'center' ? dest : 'center';
+    const clip =
+      poseRef.current === 'center'
+        ? TURN_CLIPS[dest as 'left' | 'right'].go
+        : TURN_CLIPS[poseRef.current as 'left' | 'right'].back;
+    transitioningRef.current = true;
+    turnTargetRef.current = target;
+    turnPlayer
+      .replaceAsync(clip)
+      .then(() => {
+        turnPlayer.play();
+        Animated.timing(turnOpacity, {
+          toValue: 1,
+          duration: 140,
+          useNativeDriver: true,
+        }).start();
+      })
+      .catch(() => {
+        transitioningRef.current = false;
+        turnDisabledRef.current = true;
+        Animated.timing(turnOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      });
+  };
+
+  useEventListener(turnPlayer, 'playToEnd', () => {
+    poseRef.current = turnTargetRef.current;
+    transitioningRef.current = false;
+    if (poseRef.current === 'center') {
+      Animated.timing(turnOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+    // If the gaze is still held to a side, the next gaze update chains
+    // the follow-up turn.
+  });
+
+  // He faces forward whenever he speaks or prays.
+  useEffect(() => {
+    if ((speaking || praying) && poseRef.current !== 'center') {
+      startTurn('center');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speaking, praying]);
+
+  const evaluateGaze = (x: number) => {
+    if (turnDisabledRef.current || !useVideo) return;
+    const zone: Pose | null =
+      x < -0.55 ? 'left' : x > 0.55 ? 'right' : Math.abs(x) < 0.3 ? 'center' : null;
+    if (!zone) return; // dead band — keep current intent
+    const now = Date.now();
+    if (zone !== zoneRef.current) {
+      zoneRef.current = zone;
+      zoneSinceRef.current = now;
+      return;
+    }
+    if (
+      zone !== poseRef.current &&
+      now - zoneSinceRef.current > 350 &&
+      !transitioningRef.current &&
+      !flagsRef.current.speaking &&
+      !flagsRef.current.praying
+    ) {
+      startTurn(zone);
+    }
+  };
+
   const gazeX = useRef(new Animated.Value(0)).current;
   const gazeY = useRef(new Animated.Value(0)).current;
   const breath = useRef(new Animated.Value(0)).current;
@@ -127,6 +237,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
       }
       idle.current = false;
       if (restTimer.current) clearTimeout(restTimer.current);
+      evaluateGaze(Math.max(-1, Math.min(1, x)));
       Animated.parallel([
         Animated.spring(gazeX, {
           toValue: Math.max(-1, Math.min(1, x)),
@@ -270,6 +381,21 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
             onError={() => setImageFailed(true)}
           />
         </Animated.View>
+
+        {/* Head turns: plays turn clips and holds the turned pose. */}
+        {useVideo && (
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { opacity: turnOpacity }]}
+            pointerEvents="none"
+          >
+            <VideoView
+              player={turnPlayer}
+              style={styles.portrait}
+              contentFit="cover"
+              nativeControls={false}
+            />
+          </Animated.View>
+        )}
 
         {/* Praying: eyes closed, head bowed — fades in while he prays. */}
         <Animated.View
