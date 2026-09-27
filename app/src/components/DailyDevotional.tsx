@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { DailyVerse, getTodaysDevotional } from '../lib/dailyVerse';
+import { MEDALLIONS } from '../lib/stats';
+import Medallion from './Medallion';
 
 interface Props {
   visible: boolean;
@@ -132,7 +134,12 @@ export default function DailyDevotional({ visible, streak, onDone }: Props) {
             <Text style={styles.meaningText}>{devotional.meaning}</Text>
 
             <Pressable style={styles.amenButton} onPress={amen}>
-              <Text style={styles.amenText}>🙏  Amen</Text>
+              <Medallion
+                uri={MEDALLIONS.prayingHands}
+                size={22}
+                fallback="🙏"
+              />
+              <Text style={styles.amenText}>Amen</Text>
             </Pressable>
             <Pressable onPress={onDone} hitSlop={10}>
               <Text style={styles.laterText}>Later</Text>
@@ -221,8 +228,11 @@ const styles = StyleSheet.create({
     marginTop: 40,
     backgroundColor: '#B9964E',
     borderRadius: 26,
-    paddingVertical: 15,
-    paddingHorizontal: 60,
+    paddingVertical: 13,
+    paddingHorizontal: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     shadowColor: '#B9964E',
     shadowOpacity: 0.55,
     shadowRadius: 18,
