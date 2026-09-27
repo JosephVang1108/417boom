@@ -37,7 +37,18 @@ export default function BibleScreen({ visible, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [reading, setReading] = useState(false);
+  const [readerId, setReaderId] = useState<string | null>(null);
   const readingRef = useRef(false);
+
+  useEffect(() => {
+    if (visible) setReaderId(voice.getReaderVoice());
+  }, [visible]);
+
+  const pickReaderVoice = (id: string | null) => {
+    if (readingRef.current) stopReading();
+    setReaderId(id);
+    voice.setReaderVoice(id);
+  };
 
   useEffect(() => {
     if (book && chapter) {
@@ -60,13 +71,17 @@ export default function BibleScreen({ visible, onClose }: Props) {
 
   const readAloud = () => {
     if (!verses || !book || !chapter) return;
-    if (!voice.hasVoiceKey()) {
+    if (!voice.voiceAvailable()) {
       Alert.alert(
         'Voice needs ElevenLabs',
         'Add your ElevenLabs API key in ⚙️ settings to have chapters read aloud.'
       );
       return;
     }
+    const readOptions = {
+      read: true,
+      ...(readerId ? { voice: readerId } : {}),
+    };
     // Split the chapter into passages: a short opener so audio starts
     // within seconds, then larger ones generated while the previous plays.
     const chunks: string[] = [];
@@ -85,7 +100,7 @@ export default function BibleScreen({ visible, onClose }: Props) {
     readingRef.current = true;
     setReading(true);
 
-    let upcoming = voice.synthesize(chunks[0], { read: true });
+    let upcoming = voice.synthesize(chunks[0], readOptions);
     const playFrom = async (i: number) => {
       const uri = await upcoming;
       if (!readingRef.current) return;
@@ -99,7 +114,7 @@ export default function BibleScreen({ visible, onClose }: Props) {
         return;
       }
       if (i + 1 < chunks.length)
-        upcoming = voice.synthesize(chunks[i + 1], { read: true });
+        upcoming = voice.synthesize(chunks[i + 1], readOptions);
       voice.playUri(uri, () => {
         if (!readingRef.current) return;
         if (i + 1 < chunks.length) {
@@ -217,6 +232,30 @@ export default function BibleScreen({ visible, onClose }: Props) {
               ))}
             </ScrollView>
             {verses && (
+              <View style={styles.voiceRow}>
+                <Text style={styles.voiceLabel}>Reading voice</Text>
+                {voice.READER_VOICES.map((v) => (
+                  <Pressable
+                    key={v.key}
+                    style={[
+                      styles.voiceChip,
+                      readerId === v.id && styles.voiceChipActive,
+                    ]}
+                    onPress={() => pickReaderVoice(v.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.voiceChipText,
+                        readerId === v.id && styles.voiceChipTextActive,
+                      ]}
+                    >
+                      {v.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {verses && (
               <View style={styles.readBar}>
                 <Pressable style={styles.navButton} onPress={() => goChapter(-1)}>
                   <Text style={styles.navButtonText}>‹ Prev</Text>
@@ -331,10 +370,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 28,
   },
-  readBar: {
-    padding: 14,
+  voiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  voiceLabel: {
+    color: '#6E6E66',
+    fontSize: 12,
+    marginRight: 2,
+  },
+  voiceChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  voiceChipActive: {
+    backgroundColor: 'rgba(185,150,78,0.22)',
+    borderColor: '#B9964E',
+  },
+  voiceChipText: {
+    color: '#C9C9C2',
+    fontSize: 13,
+  },
+  voiceChipTextActive: {
+    color: '#F0E6CE',
+    fontWeight: '600',
+  },
+  readBar: {
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,

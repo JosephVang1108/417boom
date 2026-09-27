@@ -6,6 +6,14 @@ import { BACKEND_TOKEN, BACKEND_URL, backendConfigured } from './config';
 
 const KEY_STORAGE = 'elevenlabs_api_key';
 const VOICE_ID_STORAGE = 'elevenlabs_voice_id';
+const READER_VOICE_STORAGE = 'reader_voice_id';
+
+// Voices offered for Bible reading. id null means the app's own voice.
+// "Sarah" is a gentle female voice from the ElevenLabs standard library.
+export const READER_VOICES = [
+  { key: 'his', label: 'His voice', id: null },
+  { key: 'sarah', label: 'Sarah (female)', id: 'EXAVITQu4vr4xnSDxMaL' },
+] as const;
 
 // The "Abide" voice — designed with ElevenLabs Voice Design: deep,
 // soft-spoken, ancient yet kind. Falls back to "Brian" (deep, calm)
@@ -21,6 +29,7 @@ const VOICE_SEED = 42;
 
 let elevenKey: string | null = null;
 let customVoiceId: string | null = null;
+let readerVoiceId: string | null = null;
 let currentPlayer: AudioPlayer | null = null;
 let audioModeReady = false;
 let generation = 0; // invalidates in-flight speech when stop() is called
@@ -30,11 +39,31 @@ export async function loadVoiceKey(): Promise<boolean> {
   try {
     elevenKey = await SecureStore.getItemAsync(KEY_STORAGE);
     customVoiceId = await SecureStore.getItemAsync(VOICE_ID_STORAGE);
+    readerVoiceId = await SecureStore.getItemAsync(READER_VOICE_STORAGE);
   } catch {
     elevenKey = null;
     customVoiceId = null;
+    readerVoiceId = null;
   }
   return !!elevenKey;
+}
+
+/** The chosen Bible-reading voice id, or null for the app's own voice. */
+export function getReaderVoice(): string | null {
+  return readerVoiceId;
+}
+
+export async function setReaderVoice(id: string | null): Promise<void> {
+  readerVoiceId = id;
+  try {
+    if (id) {
+      await SecureStore.setItemAsync(READER_VOICE_STORAGE, id);
+    } else {
+      await SecureStore.deleteItemAsync(READER_VOICE_STORAGE);
+    }
+  } catch {
+    // Storage unavailable — choice still applies this session.
+  }
 }
 
 export async function setVoiceKey(key: string): Promise<void> {
@@ -83,6 +112,8 @@ export interface SpeakOptions {
   story?: boolean;
   /** Long-form reading (Bible chapters): fast engine, quick start. */
   read?: boolean;
+  /** Voice override for this utterance (e.g. the Bible reading voice). */
+  voice?: string;
 }
 
 /**
@@ -113,7 +144,11 @@ export async function synthesize(
       text,
       ...(options.story ? { story: '1' } : {}),
       ...(options.read ? { read: '1' } : {}),
-      ...(customVoiceId ? { voice: customVoiceId } : {}),
+      ...(options.voice
+        ? { voice: options.voice }
+        : customVoiceId
+          ? { voice: customVoiceId }
+          : {}),
     });
     return `${BACKEND_URL}/tts?${params.toString()}`;
   }
@@ -166,6 +201,7 @@ export async function synthesize(
       ? ['eleven_turbo_v2_5', 'eleven_multilingual_v2']
       : ['eleven_v3', 'eleven_multilingual_v2'];
     const candidates = [
+      ...(options.voice ? [options.voice] : []),
       ...(customVoiceId ? [customVoiceId] : []),
       ELEVEN_VOICE_ID,
       ELEVEN_FALLBACK_VOICE_ID,
