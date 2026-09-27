@@ -149,13 +149,27 @@ function getClient(): Anthropic {
  * (no key, network/API error, refusal, or unparseable output) so the
  * caller can fall back to the offline verse engine.
  */
-export async function aiRespond(userText: string): Promise<GuideResponse | null> {
+export interface RespondOptions {
+  /** They have used hateful slurs repeatedly: set the normal style
+   * aside and pray over them, long and from the heart. */
+  hatePrayer?: boolean;
+}
+
+export async function aiRespond(
+  userText: string,
+  options: RespondOptions = {}
+): Promise<GuideResponse | null> {
   if (!isAiAvailable()) return null;
 
   const messages: Anthropic.MessageParam[] = [
     ...history,
     { role: 'user', content: userText },
   ];
+
+  let system = systemPrompt();
+  if (options.hatePrayer) {
+    system += `\n\nIMPORTANT — FOR THIS REPLY ONLY: they have now used hateful, slurring language several times in this conversation. Do not debate, scold, or answer the content. Stop everything and PRAY OVER THEM — long and from the heart, 12–20 sentences with "…" pauses between petitions. Without ever repeating any slur: gently name the anger and hate they are carrying; ask the Father's love to soften their heart; pray blessing over the very people they spoke against, that they might be seen as beloved; pray peace over their own hidden hurts, because hate usually grows from a wound; and close with hope for them, ending with "Amen." Set is_prayer true. Verse null, or one verse about love if it truly fits.`;
+  }
 
   try {
     const response = await getClient().messages.parse({
@@ -166,7 +180,7 @@ export async function aiRespond(userText: string): Promise<GuideResponse | null>
         // Low effort keeps replies quick — right for warm conversation.
         effort: 'low',
       },
-      system: systemPrompt(),
+      system,
       messages,
     });
 
