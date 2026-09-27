@@ -35,7 +35,7 @@ import {
   resetConversation,
   setApiKey,
 } from './src/lib/ai';
-import { cleanForDisplay } from './src/lib/clean';
+import { cleanForDisplay, hasSlur } from './src/lib/clean';
 import { backendConfigured } from './src/lib/config';
 import * as dailyVerse from './src/lib/dailyVerse';
 import * as journal from './src/lib/journal';
@@ -112,6 +112,30 @@ export default function App() {
   };
   const markActive = () => {
     lastActivity.current = Date.now();
+  };
+
+  // Repeated slurs: after the third strike he stops and prays over
+  // them — a long prayer about the hate and for peace — then the
+  // count starts fresh.
+  const hateStrikes = useRef(0);
+
+  const hatePrayerFallback = (): GuideResponse => {
+    const name = profile.getName();
+    const who = name ? name : 'this heart before You';
+    return {
+      topicId: 'hate-prayer',
+      intro:
+        `Father… I want to stop right here and pray for ${who}. … ` +
+        `There is anger in these words… words that wound people You made and You love. … ` +
+        `Lord, You see what lives underneath anger like this… the old hurts… the things that were never made right. … ` +
+        `So I ask You now — soften this heart. … Pour Your peace into the places where the anger lives. … ` +
+        `And Father, I pray blessing over the very people who were spoken against… let them be seen the way You see them… beloved… every one of them. … ` +
+        `Heal what is wounded here… wash all of it in Your mercy… ` +
+        `and lead this heart gently back to love. … ` +
+        `I am not letting go of you. … Amen.`,
+      verse: null,
+      isPrayer: true,
+    };
   };
 
   useEffect(() => {
@@ -341,16 +365,24 @@ export default function App() {
     setInput('');
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
 
+    // Slur strikes: the third one triggers the prayer intervention.
+    if (hasSlur(question)) hateStrikes.current += 1;
+    const needHatePrayer = hateStrikes.current >= 3;
+
     // Prefer Claude when a key is set; fall back to the offline verse engine.
     let response: GuideResponse | null = null;
     if (aiReady) {
-      response = await aiRespond(question);
+      response = await aiRespond(
+        question,
+        needHatePrayer ? { hatePrayer: true } : {}
+      );
       if (!isAiAvailable()) setAiReady(false); // key was rejected
     }
-    if (!response) response = respond(question);
+    if (!response) response = needHatePrayer ? hatePrayerFallback() : respond(question);
+    if (needHatePrayer) hateStrikes.current = 0;
 
     setHistory((h) => h.map((ex) => (ex.id === id ? { ...ex, response } : ex)));
-    if (response.isPrayer) journal.addPrayer(shown);
+    if (response.isPrayer && !needHatePrayer) journal.addPrayer(shown);
     if (voiceOn) speak(response);
   };
 

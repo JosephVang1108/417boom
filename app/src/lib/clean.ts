@@ -96,6 +96,21 @@ export function cleanForDisplay(text: string): string {
   }
 }
 
+// The worst slurs the library catches that our extra list doesn't
+// duplicate — used only for strike-counting, never displayed.
+const LIBRARY_SLURS = /\b(?:n[i1]gg(?:a|er)s?|f[a@]gg?(?:ot)?s?)\b/i;
+
+/** True when the text contains a slur (not mere profanity) — used to
+ * count hate strikes toward the prayer intervention. */
+export function hasSlur(text: string): boolean {
+  try {
+    EXTRA_SLURS.lastIndex = 0;
+    return EXTRA_SLURS.test(text) || LIBRARY_SLURS.test(text);
+  } catch {
+    return false;
+  }
+}
+
 /** True when the text contains profanity or slurs. */
 export function hasProfanity(text: string): boolean {
   try {
