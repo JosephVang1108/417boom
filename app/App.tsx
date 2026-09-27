@@ -6,6 +6,7 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import { StatusBar } from 'expo-status-bar';
+import { DeviceMotion } from 'expo-sensors';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -178,9 +179,59 @@ export default function App() {
 
   const track = (x: number, y: number) => {
     markActive();
+    lastTouchAt.current = Date.now();
     const { w, h } = touchZone.current;
     faceRef.current?.lookToward((x - w / 2) / (w / 2), (y - h / 2) / (h / 2));
   };
+
+  // Motion following: as the phone moves or tilts in their hands, he
+  // leans and gazes to follow — hands-free presence. Touch input takes
+  // priority for a moment after each touch.
+  const lastTouchAt = useRef(0);
+  const motionBase = useRef<{ beta: number; gamma: number } | null>(null);
+  const motionSamples = useRef(0);
+
+  useEffect(() => {
+    let subscription: { remove: () => void } | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const perm = await DeviceMotion.requestPermissionsAsync();
+        if (!perm.granted || cancelled) return;
+        DeviceMotion.setUpdateInterval(120);
+        subscription = DeviceMotion.addListener(({ rotation }) => {
+          if (!rotation) return;
+          const { beta, gamma } = rotation; // pitch, roll (radians)
+          if (typeof beta !== 'number' || typeof gamma !== 'number') return;
+          // First few readings define "neutral" for how they hold the phone.
+          if (motionSamples.current < 5) {
+            const base = motionBase.current;
+            motionBase.current = base
+              ? {
+                  beta: (base.beta + beta) / 2,
+                  gamma: (base.gamma + gamma) / 2,
+                }
+              : { beta, gamma };
+            motionSamples.current++;
+            return;
+          }
+          if (Date.now() - lastTouchAt.current < 1500) return;
+          const base = motionBase.current!;
+          const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+          faceRef.current?.lookToward(
+            clamp((gamma - base.gamma) / 0.35),
+            clamp((beta - base.beta) / 0.35)
+          );
+        });
+      } catch {
+        // Sensors unavailable — touch-follow still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      subscription?.remove();
+    };
+  }, []);
 
   const speak = (response: GuideResponse) => {
     setSpeaking(true);
