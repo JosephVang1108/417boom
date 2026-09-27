@@ -49,7 +49,12 @@ const TURN_CLIPS = {
   },
 } as const;
 
-type Pose = 'center' | 'left' | 'right';
+// Turn clips read as slow motion at natural speed; play them faster.
+const TURN_SPEED = 1.6;
+// How long he holds the turned pose before glancing back.
+const TURN_HOLD_MS = 1200;
+// Breather between glances so he doesn't whip around constantly.
+const GLANCE_COOLDOWN_MS = 4000;
 
 interface Props {
   width: number;
@@ -128,151 +133,181 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
   }, [praying, prayOpacity, prayPlayer]);
 
   // ---- Real head turns -------------------------------------------------
-  // When the gaze pushes far left/right and holds, play the matching turn
-  // clip, hold the turned pose on its final frame, and turn back when the
-  // gaze returns to center. While speaking or praying he faces forward.
-  const turnPlayer = useVideoPlayer(null, (p) => {
+  // A sustained lean of the phone triggers one quick "glance": the
+  // turn-away clip plays (sped up to natural pace), he holds the pose a
+  // beat, then the return clip — preloaded in a second player while the
+  // first was playing — brings him back with no network wait. The whole
+  // glance is one self-completing sequence, so he can never be left
+  // stuck facing sideways.
+  const goPlayer = useVideoPlayer(null, (p) => {
     p.loop = false;
     p.muted = true;
+    p.playbackRate = TURN_SPEED;
+  });
+  const backPlayer = useVideoPlayer(null, (p) => {
+    p.loop = false;
+    p.muted = true;
+    p.playbackRate = TURN_SPEED;
   });
   const turnOpacity = useRef(new Animated.Value(0)).current;
-  const poseRef = useRef<Pose>('center');
-  const turnTargetRef = useRef<Pose>('center');
-  const transitioningRef = useRef(false);
+  const goOpacity = useRef(new Animated.Value(1)).current;
+  const backOpacity = useRef(new Animated.Value(0)).current;
+  const phaseRef = useRef<'idle' | 'go' | 'hold' | 'awaitBack' | 'back'>(
+    'idle'
+  );
+  const glanceIdRef = useRef(0);
+  const glanceEndedAtRef = useRef(0);
+  const backReadyRef = useRef(false);
   const turnDisabledRef = useRef(false);
-  const turnIdRef = useRef(0);
   const turnFailuresRef = useRef(0);
-  const turnWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const recenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const zoneRef = useRef<Pose>('center');
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const zoneRef = useRef<'left' | 'right' | 'center'>('center');
   const zoneSinceRef = useRef(0);
   const flagsRef = useRef({ speaking, praying });
   flagsRef.current = { speaking, praying };
 
   const clearTurnTimers = () => {
-    if (turnWatchdogRef.current) {
-      clearTimeout(turnWatchdogRef.current);
-      turnWatchdogRef.current = null;
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
     }
-    if (recenterTimerRef.current) {
-      clearTimeout(recenterTimerRef.current);
-      recenterTimerRef.current = null;
+    if (watchdogRef.current) {
+      clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
     }
   };
   useEffect(() => clearTurnTimers, []);
 
-  // Bail out of a turn that stalled or errored: fade back to the living
-  // center loop so he is never left frozen. Three failed turns in a row
-  // (bad network, bad clip) switch turning off for the session.
-  const abortTurn = () => {
-    turnFailuresRef.current += 1;
-    if (turnFailuresRef.current >= 3) turnDisabledRef.current = true;
-    transitioningRef.current = false;
-    poseRef.current = 'center';
-    turnTargetRef.current = 'center';
-    turnPlayer.pause();
+  // End of a glance — clean or failed. On failure he simply fades back
+  // to the living center loop; three failures in a row (bad network)
+  // switch glances off for the session.
+  const finishGlance = (failed: boolean) => {
+    clearTurnTimers();
+    if (failed) {
+      turnFailuresRef.current += 1;
+      if (turnFailuresRef.current >= 3) turnDisabledRef.current = true;
+    } else {
+      turnFailuresRef.current = 0;
+    }
+    phaseRef.current = 'idle';
+    glanceEndedAtRef.current = Date.now();
+    goPlayer.pause();
+    backPlayer.pause();
     Animated.timing(turnOpacity, {
       toValue: 0,
-      duration: 250,
+      duration: failed ? 300 : 500,
       useNativeDriver: true,
     }).start();
   };
 
-  const startTurn = (dest: Pose) => {
-    if (turnDisabledRef.current || transitioningRef.current) return;
-    if (poseRef.current === dest) return;
-    // A side-to-side change routes through center first.
-    const target: Pose = poseRef.current === 'center' ? dest : 'center';
-    const clip =
-      poseRef.current === 'center'
-        ? TURN_CLIPS[dest as 'left' | 'right'].go
-        : TURN_CLIPS[poseRef.current as 'left' | 'right'].back;
-    transitioningRef.current = true;
-    turnTargetRef.current = target;
-    const id = ++turnIdRef.current;
-    clearTurnTimers();
-    // Watchdog: streamed clips can stall and then 'playToEnd' never
-    // fires; without this he would freeze mid-turn forever.
-    turnWatchdogRef.current = setTimeout(() => {
-      if (turnIdRef.current === id && transitioningRef.current) abortTurn();
-    }, 9000);
-    turnPlayer
-      .replaceAsync(clip)
+  const playBack = () => {
+    phaseRef.current = 'back';
+    // The go clip's last frame equals the back clip's first frame, so
+    // an instant swap between the two players is invisible.
+    backOpacity.setValue(1);
+    goOpacity.setValue(0);
+    backPlayer.play();
+  };
+
+  const requestBack = () => {
+    if (backReadyRef.current) playBack();
+    else phaseRef.current = 'awaitBack'; // plays the moment it loads
+  };
+
+  const startGlance = (dir: 'left' | 'right') => {
+    if (turnDisabledRef.current || phaseRef.current !== 'idle' || !useVideo)
+      return;
+    if (flagsRef.current.speaking || flagsRef.current.praying) return;
+    if (Date.now() - glanceEndedAtRef.current < GLANCE_COOLDOWN_MS) return;
+    const id = ++glanceIdRef.current;
+    phaseRef.current = 'go';
+    backReadyRef.current = false;
+    goOpacity.setValue(1);
+    backOpacity.setValue(0);
+    // Watchdog: a stalled stream must never leave him stuck sideways.
+    watchdogRef.current = setTimeout(() => {
+      if (glanceIdRef.current === id && phaseRef.current !== 'idle') {
+        finishGlance(true);
+      }
+    }, 14000);
+    goPlayer
+      .replaceAsync(TURN_CLIPS[dir].go)
       .then(() => {
-        if (turnIdRef.current !== id || !transitioningRef.current) return;
-        turnPlayer.play();
+        if (glanceIdRef.current !== id || phaseRef.current !== 'go') return;
+        goPlayer.play();
         Animated.timing(turnOpacity, {
           toValue: 1,
-          duration: 140,
+          duration: 200,
           useNativeDriver: true,
         }).start();
       })
       .catch(() => {
-        if (turnIdRef.current !== id || !transitioningRef.current) return;
-        abortTurn();
+        if (glanceIdRef.current === id && phaseRef.current !== 'idle') {
+          finishGlance(true);
+        }
+      });
+    // Preload the return clip while the turn-away clip plays, so the
+    // way back never waits on the network.
+    backPlayer
+      .replaceAsync(TURN_CLIPS[dir].back)
+      .then(() => {
+        if (glanceIdRef.current !== id) return;
+        backReadyRef.current = true;
+        if (phaseRef.current === 'awaitBack') playBack();
+      })
+      .catch(() => {
+        if (glanceIdRef.current === id && phaseRef.current !== 'idle') {
+          finishGlance(true);
+        }
       });
   };
 
-  useEventListener(turnPlayer, 'playToEnd', () => {
-    clearTurnTimers();
-    turnFailuresRef.current = 0;
-    poseRef.current = turnTargetRef.current;
-    transitioningRef.current = false;
-    if (poseRef.current === 'center') {
-      Animated.timing(turnOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      // Holding a side pose shows the clip's final frame, which is
-      // static — return to the living center loop on his own after a
-      // few seconds even if the gaze never re-centers.
-      recenterTimerRef.current = setTimeout(() => {
-        if (poseRef.current !== 'center' && !transitioningRef.current) {
-          startTurn('center');
-        }
-      }, 7000);
-    }
-    // If the gaze is still held to a side, the next gaze update chains
-    // the follow-up turn.
+  useEventListener(goPlayer, 'playToEnd', () => {
+    if (phaseRef.current !== 'go') return;
+    phaseRef.current = 'hold';
+    const hold =
+      flagsRef.current.speaking || flagsRef.current.praying ? 0 : TURN_HOLD_MS;
+    holdTimerRef.current = setTimeout(() => {
+      if (phaseRef.current === 'hold') requestBack();
+    }, hold);
   });
 
-  useEventListener(turnPlayer, 'statusChange', ({ status: turnStatus }) => {
-    if (turnStatus === 'error' && transitioningRef.current) {
-      clearTurnTimers();
-      abortTurn();
-    }
+  useEventListener(backPlayer, 'playToEnd', () => {
+    if (phaseRef.current === 'back') finishGlance(false);
   });
 
-  // He faces forward whenever he speaks or prays.
+  useEventListener(goPlayer, 'statusChange', ({ status: s }) => {
+    if (s === 'error' && phaseRef.current !== 'idle') finishGlance(true);
+  });
+  useEventListener(backPlayer, 'statusChange', ({ status: s }) => {
+    if (s === 'error' && phaseRef.current !== 'idle') finishGlance(true);
+  });
+
+  // If he starts speaking or praying mid-glance, cut the hold short and
+  // come back to face forward right away.
   useEffect(() => {
-    if ((speaking || praying) && poseRef.current !== 'center') {
-      startTurn('center');
+    if ((speaking || praying) && phaseRef.current === 'hold') {
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+      requestBack();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speaking, praying]);
 
   const evaluateGaze = (x: number) => {
-    if (turnDisabledRef.current || !useVideo) return;
-    const zone: Pose | null =
-      x < -0.55 ? 'left' : x > 0.55 ? 'right' : Math.abs(x) < 0.3 ? 'center' : null;
-    if (!zone) return; // dead band — keep current intent
+    const zone: 'left' | 'right' | null =
+      x < -0.55 ? 'left' : x > 0.55 ? 'right' : null;
+    if (!zone) {
+      zoneRef.current = 'center';
+      return;
+    }
     const now = Date.now();
     if (zone !== zoneRef.current) {
       zoneRef.current = zone;
       zoneSinceRef.current = now;
       return;
     }
-    if (
-      zone !== poseRef.current &&
-      now - zoneSinceRef.current > 350 &&
-      !transitioningRef.current &&
-      !flagsRef.current.speaking &&
-      !flagsRef.current.praying
-    ) {
-      startTurn(zone);
-    }
+    if (now - zoneSinceRef.current > 350) startGlance(zone);
   };
 
   const gazeX = useRef(new Animated.Value(0)).current;
@@ -436,18 +471,34 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
           />
         </Animated.View>
 
-        {/* Head turns: plays turn clips and holds the turned pose. */}
+        {/* Head glances: the turn-away and turn-back clips live in two
+            players so the return is preloaded; their shared boundary
+            frame makes the swap between them invisible. */}
         {useVideo && (
           <Animated.View
             style={[StyleSheet.absoluteFill, { opacity: turnOpacity }]}
             pointerEvents="none"
           >
-            <VideoView
-              player={turnPlayer}
-              style={styles.portrait}
-              contentFit="cover"
-              nativeControls={false}
-            />
+            <Animated.View
+              style={[StyleSheet.absoluteFill, { opacity: goOpacity }]}
+            >
+              <VideoView
+                player={goPlayer}
+                style={styles.portrait}
+                contentFit="cover"
+                nativeControls={false}
+              />
+            </Animated.View>
+            <Animated.View
+              style={[StyleSheet.absoluteFill, { opacity: backOpacity }]}
+            >
+              <VideoView
+                player={backPlayer}
+                style={styles.portrait}
+                contentFit="cover"
+                nativeControls={false}
+              />
+            </Animated.View>
           </Animated.View>
         )}
 
