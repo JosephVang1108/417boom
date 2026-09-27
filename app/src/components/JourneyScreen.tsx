@@ -25,6 +25,7 @@ interface Props {
   streak: number;
   onClose: () => void;
   onOpenBible: () => void;
+  onOpenDevotional: () => void;
   onTellStory: (ask: string) => void;
 }
 
@@ -62,6 +63,7 @@ export default function JourneyScreen({
   streak,
   onClose,
   onOpenBible,
+  onOpenDevotional,
   onTellStory,
 }: Props) {
   const [stats, setStats] = useState<JourneyStats>(getStats());
@@ -154,10 +156,30 @@ export default function JourneyScreen({
 
           {/* Straight into the Word */}
           <Pressable style={styles.bibleButton} onPress={onOpenBible}>
-            <Text style={styles.bibleButtonText}>📖  Open the Bible</Text>
-            <Text style={styles.bibleButtonSub}>
-              Read, or have it read to you
-            </Text>
+            <Medallion uri={MEDALLIONS.book} size={26} fallback="📖" />
+            <View style={styles.bibleButtonBody}>
+              <Text style={styles.bibleButtonText}>Open the Bible</Text>
+              <Text style={styles.bibleButtonSub}>
+                Read, or have it read to you
+              </Text>
+            </View>
+            <Text style={styles.rowArrow}>›</Text>
+          </Pressable>
+
+          {/* Today's devotional, anytime */}
+          <Pressable style={styles.wordButton} onPress={onOpenDevotional}>
+            <Medallion
+              uri={'https://g.tlcdn.com/gen/3785b1ad19964d7c8f776b37b08906f7.jpg'}
+              size={26}
+              fallback="🌅"
+            />
+            <View style={styles.bibleButtonBody}>
+              <Text style={styles.wordButtonText}>Today's Word</Text>
+              <Text style={styles.wordButtonSub}>
+                The day's verse, and what it means
+              </Text>
+            </View>
+            <Text style={styles.rowArrowDark}>›</Text>
           </Pressable>
 
           {/* Lifetime moments */}
@@ -346,14 +368,20 @@ const styles = StyleSheet.create({
   bibleButton: {
     marginTop: 14,
     borderRadius: 18,
-    paddingVertical: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     backgroundColor: GOLD,
     shadowColor: '#8B6B2E',
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
+  },
+  bibleButtonBody: {
+    flex: 1,
   },
   bibleButtonText: {
     color: '#FBF5E7',
@@ -362,6 +390,36 @@ const styles = StyleSheet.create({
   },
   bibleButtonSub: {
     color: 'rgba(251,245,231,0.75)',
+    fontSize: 12,
+    marginTop: 3,
+  },
+  rowArrow: {
+    color: '#FBF5E7',
+    fontSize: 24,
+  },
+  rowArrowDark: {
+    color: GOLD,
+    fontSize: 24,
+  },
+  wordButton: {
+    marginTop: 10,
+    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: EDGE,
+  },
+  wordButtonText: {
+    color: INK,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  wordButtonSub: {
+    color: INK_SOFT,
     fontSize: 12,
     marginTop: 3,
   },
