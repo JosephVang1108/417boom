@@ -16,7 +16,9 @@ import {
   getStats,
   JourneyStats,
   loadStats,
+  MEDALLIONS,
 } from '../lib/stats';
+import Medallion from './Medallion';
 
 interface Props {
   visible: boolean;
@@ -31,17 +33,24 @@ const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' });
 // The story shelf, in order of popularity. The first is free; the rest
 // unlock with Premium at launch. (For now he'll still tell any story
 // you ask him for out loud — this shelf is the browsing experience.)
-const STORIES: { title: string; ask: string; emoji: string; free?: boolean }[] = [
-  { title: 'David & Goliath', ask: 'David and Goliath', emoji: '🪨', free: true },
-  { title: 'The Birth of Jesus', ask: 'the birth of Jesus', emoji: '⭐' },
-  { title: 'The Resurrection', ask: 'the resurrection of Jesus', emoji: '🌅' },
-  { title: 'Noah & the Flood', ask: 'Noah and the flood', emoji: '🌈' },
-  { title: 'The Exodus', ask: 'the Exodus', emoji: '🌊' },
-  { title: "Daniel in the Lions' Den", ask: "Daniel in the lions' den", emoji: '🦁' },
-  { title: 'Jonah & the Great Fish', ask: 'Jonah and the great fish', emoji: '🐋' },
-  { title: 'The Prodigal Son', ask: 'the prodigal son', emoji: '🏡' },
-  { title: 'Creation', ask: 'the creation of the world', emoji: '🌍' },
-  { title: 'Queen Esther', ask: 'Queen Esther', emoji: '💛' },
+const STORY_ART = (hash: string) => `https://g.tlcdn.com/gen/${hash}.jpg`;
+const STORIES: {
+  title: string;
+  ask: string;
+  emoji: string;
+  icon: string;
+  free?: boolean;
+}[] = [
+  { title: 'David & Goliath', ask: 'David and Goliath', emoji: '🪨', icon: STORY_ART('721dff69351842afbb6590271f8d5620'), free: true },
+  { title: 'The Birth of Jesus', ask: 'the birth of Jesus', emoji: '⭐', icon: STORY_ART('9b36428081044649b5951e7fff2fc649') },
+  { title: 'The Resurrection', ask: 'the resurrection of Jesus', emoji: '🌅', icon: STORY_ART('4d3623c4acfb4f3dba19a00bf58423b8') },
+  { title: 'Noah & the Flood', ask: 'Noah and the flood', emoji: '🌈', icon: STORY_ART('1f2f51e55be9451085df14b7408ebf9b') },
+  { title: 'The Exodus', ask: 'the Exodus', emoji: '🌊', icon: STORY_ART('62f00aabf4a14804a95a2afb73e881b4') },
+  { title: "Daniel in the Lions' Den", ask: "Daniel in the lions' den", emoji: '🦁', icon: STORY_ART('c0015747e48345e0827ded2500e761c1') },
+  { title: 'Jonah & the Great Fish', ask: 'Jonah and the great fish', emoji: '🐋', icon: STORY_ART('e4cd7aa3bda042a9bc4d472ac92887be') },
+  { title: 'The Prodigal Son', ask: 'the prodigal son', emoji: '🏡', icon: STORY_ART('34e6a66e7fbf4d9ca97375162c6e2d55') },
+  { title: 'Creation', ask: 'the creation of the world', emoji: '🌍', icon: STORY_ART('e3994a1fb3f44586b31a0c8f9c5d5968') },
+  { title: 'Queen Esther', ask: 'Queen Esther', emoji: '💛', icon: STORY_ART('81f4f79ca7c04fdcb026a7fb5c3bdf57') },
 ];
 
 /**
@@ -67,10 +76,10 @@ export default function JourneyScreen({
   const prayers = journal.getJournal().slice(0, 3);
 
   const streakGoals: { target: number; label: string }[] = [
-    { target: 3, label: '👣 Three Days Walking' },
-    { target: 7, label: '🌿 Week of Grace' },
-    { target: 30, label: '⭐ Faithful Month' },
-    { target: 100, label: '👑 Hundredfold' },
+    { target: 3, label: 'Three Days Walking' },
+    { target: 7, label: 'Week of Grace' },
+    { target: 30, label: 'Faithful Month' },
+    { target: 100, label: 'Hundredfold' },
   ];
   const nowStreak = Math.max(streak, 1);
   const nextGoal = streakGoals.find((g) => g.target > nowStreak);
@@ -88,7 +97,7 @@ export default function JourneyScreen({
 
   const badgeCard = (b: Badge) => (
     <View key={b.id} style={[styles.badge, !b.earned && styles.badgeLocked]}>
-      <Text style={styles.badgeEmoji}>{b.emoji}</Text>
+      <Medallion uri={b.icon} size={54} fallback={b.emoji} />
       <Text style={styles.badgeName}>{b.name}</Text>
       <Text style={styles.badgeDesc}>{b.desc}</Text>
     </View>
@@ -112,7 +121,7 @@ export default function JourneyScreen({
         <ScrollView contentContainerStyle={styles.content}>
           {/* The walk so far */}
           <View style={styles.streakCard}>
-            <Text style={styles.streakDove}>🕊️</Text>
+            <Medallion uri={MEDALLIONS.dove} size={52} fallback="🕊️" />
             <Text style={styles.streakBig}>Day {nowStreak}</Text>
             <Text style={styles.streakTogether}>walking together</Text>
             <Text style={styles.streakSub}>
@@ -184,7 +193,7 @@ export default function JourneyScreen({
                 style={styles.storyCard}
                 onPress={() => openStory(s)}
               >
-                <Text style={styles.storyEmoji}>{s.emoji}</Text>
+                <Medallion uri={s.icon} size={50} fallback={s.emoji} />
                 <Text style={styles.storyTitle}>{s.title}</Text>
                 <Text style={[styles.storyTag, s.free && styles.storyTagFree]}>
                   {s.free ? 'FREE' : '🔒 PREMIUM'}

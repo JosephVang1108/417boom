@@ -19,7 +19,9 @@ import {
   OLD_TESTAMENT,
 } from '../data/bibleBooks';
 import * as stats from '../lib/stats';
+import { MEDALLIONS } from '../lib/stats';
 import * as voice from '../lib/voice';
+import Medallion from './Medallion';
 
 interface Props {
   visible: boolean;
@@ -287,8 +289,9 @@ export default function BibleScreen({ visible, onClose }: Props) {
             {verses && selected.size > 0 && (
               <View style={styles.shareBar}>
                 <Pressable style={styles.shareButton} onPress={shareSelected}>
+                  <Medallion uri={MEDALLIONS.dove} size={20} fallback="🕊️" />
                   <Text style={styles.shareButtonText}>
-                    🕊️ Share {selected.size}{' '}
+                    Share {selected.size}{' '}
                     {selected.size === 1 ? 'verse' : 'verses'}
                   </Text>
                 </Pressable>
@@ -477,8 +480,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: GOLD,
     borderRadius: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 8,
   },
   shareButtonText: {
     color: CARD,

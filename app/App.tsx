@@ -41,7 +41,9 @@ import * as dailyVerse from './src/lib/dailyVerse';
 import * as journal from './src/lib/journal';
 import { touchStreak } from './src/lib/streak';
 import * as stats from './src/lib/stats';
+import { MEDALLIONS } from './src/lib/stats';
 import JourneyScreen from './src/components/JourneyScreen';
+import Medallion from './src/components/Medallion';
 import DailyDevotional from './src/components/DailyDevotional';
 import {
   displayText,
@@ -464,7 +466,8 @@ export default function App() {
                 }}
                 hitSlop={8}
               >
-                <Text style={styles.headerPillText}>📖 Bible</Text>
+                <Medallion uri={MEDALLIONS.book} size={18} fallback="📖" />
+                <Text style={styles.headerPillText}>Bible</Text>
               </Pressable>
               <Pressable
                 style={styles.headerPill}
@@ -474,7 +477,8 @@ export default function App() {
                 }}
                 hitSlop={8}
               >
-                <Text style={styles.headerPillText}>✨ Journey</Text>
+                <Medallion uri={MEDALLIONS.dove} size={18} fallback="🕊️" />
+                <Text style={styles.headerPillText}>Journey</Text>
               </Pressable>
               <Pressable onPress={toggleVoice} hitSlop={14}>
                 <Text style={styles.voiceToggle}>{voiceOn ? '🔊' : '🔇'}</Text>
@@ -729,8 +733,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   headerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 16,
     backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
