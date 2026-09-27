@@ -661,6 +661,11 @@ export default function App() {
               setJourneyOpen(false);
               setBibleOpen(true);
             }}
+            onOpenDevotional={() => {
+              markActive();
+              setJourneyOpen(false);
+              setDevotionalVisible(true);
+            }}
             onTellStory={(ask) => {
               markActive();
               setJourneyOpen(false);

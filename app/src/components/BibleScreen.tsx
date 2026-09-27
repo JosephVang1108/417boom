@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   BibleBook,
   BibleVerse,
@@ -35,6 +36,22 @@ const CHUNK_CHARS = 1100;
 
 const ALL_BOOKS = [...OLD_TESTAMENT, ...NEW_TESTAMENT];
 
+// Organized the way a Bible's own table of contents is.
+const OT_GROUPS = [
+  { title: 'The Law', books: OLD_TESTAMENT.slice(0, 5) },
+  { title: 'History', books: OLD_TESTAMENT.slice(5, 17) },
+  { title: 'Wisdom & Poetry', books: OLD_TESTAMENT.slice(17, 22) },
+  { title: 'The Prophets', books: OLD_TESTAMENT.slice(22) },
+];
+const NT_GROUPS = [
+  { title: 'The Gospels', books: NEW_TESTAMENT.slice(0, 4) },
+  { title: 'The Early Church', books: NEW_TESTAMENT.slice(4, 5) },
+  { title: 'The Letters', books: NEW_TESTAMENT.slice(5, 26) },
+  { title: 'Revelation', books: NEW_TESTAMENT.slice(26) },
+];
+
+const LAST_POS_KEY = 'bible_last_position';
+
 export default function BibleScreen({ visible, onClose }: Props) {
   const [book, setBook] = useState<BibleBook | null>(null);
   const [chapter, setChapter] = useState<number | null>(null);
@@ -44,7 +61,27 @@ export default function BibleScreen({ visible, onClose }: Props) {
   const [reading, setReading] = useState(false);
   const [readerId, setReaderId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [lastPos, setLastPos] = useState<{
+    book: string;
+    chapter: number;
+  } | null>(null);
   const readingRef = useRef(false);
+
+  useEffect(() => {
+    if (visible) {
+      AsyncStorage.getItem(LAST_POS_KEY)
+        .then((raw) => raw && setLastPos(JSON.parse(raw)))
+        .catch(() => {});
+    }
+  }, [visible]);
+
+  const continueReading = () => {
+    if (!lastPos) return;
+    const b = ALL_BOOKS.find((x) => x.name === lastPos.book);
+    if (!b) return;
+    setBook(b);
+    setChapter(Math.min(lastPos.chapter, b.chapters));
+  };
 
   const toggleVerse = (n: number) => {
     setSelected((prev) => {
@@ -97,6 +134,9 @@ export default function BibleScreen({ visible, onClose }: Props) {
       setFailed(false);
       setVerses(null);
       setSelected(new Set());
+      const pos = { book: book.name, chapter };
+      setLastPos(pos);
+      AsyncStorage.setItem(LAST_POS_KEY, JSON.stringify(pos)).catch(() => {});
       fetchChapter(book.name, chapter).then((v) => {
         setVerses(v);
         setFailed(!v);
@@ -204,16 +244,29 @@ export default function BibleScreen({ visible, onClose }: Props) {
     }
   };
 
-  const bookList = (title: string, books: BibleBook[]) => (
-    <>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.grid}>
-        {books.map((b) => (
-          <Pressable key={b.name} style={styles.bookChip} onPress={() => setBook(b)}>
-            <Text style={styles.bookChipText}>{b.name}</Text>
+  const bookGroup = (title: string, books: BibleBook[]) => (
+    <View key={title}>
+      <Text style={styles.groupLabel}>{title.toUpperCase()}</Text>
+      <View style={styles.groupCard}>
+        {books.map((b, i) => (
+          <Pressable
+            key={b.name}
+            style={[styles.bookRow, i < books.length - 1 && styles.bookRowLine]}
+            onPress={() => setBook(b)}
+          >
+            <Text style={styles.bookName}>{b.name}</Text>
+            <Text style={styles.bookChapters}>{b.chapters}</Text>
           </Pressable>
         ))}
       </View>
+    </View>
+  );
+
+  const testament = (title: string, groups: typeof OT_GROUPS) => (
+    <>
+      <Text style={styles.testamentTitle}>{title}</Text>
+      <View style={styles.testamentRule} />
+      {groups.map((g) => bookGroup(g.title, g.books))}
     </>
   );
 
@@ -234,8 +287,19 @@ export default function BibleScreen({ visible, onClose }: Props) {
 
         {!book && (
           <ScrollView contentContainerStyle={styles.content}>
-            {bookList('New Testament', NEW_TESTAMENT)}
-            {bookList('Old Testament', OLD_TESTAMENT)}
+            {lastPos && (
+              <Pressable style={styles.continueCard} onPress={continueReading}>
+                <View>
+                  <Text style={styles.continueLabel}>CONTINUE READING</Text>
+                  <Text style={styles.continueText}>
+                    {lastPos.book} {lastPos.chapter}
+                  </Text>
+                </View>
+                <Text style={styles.continueArrow}>›</Text>
+              </Pressable>
+            )}
+            {testament('The New Testament', NT_GROUPS)}
+            {testament('The Old Testament', OT_GROUPS)}
             <Text style={styles.translationNote}>World English Bible (public domain)</Text>
           </ScrollView>
         )}
@@ -266,6 +330,14 @@ export default function BibleScreen({ visible, onClose }: Props) {
                   Couldn't load this chapter. Check your internet connection and
                   tap the chapter again.
                 </Text>
+              )}
+              {verses && (
+                <View style={styles.chapterHead}>
+                  <Text style={styles.chapterHeadText}>
+                    {book.name} {chapter}
+                  </Text>
+                  <View style={styles.chapterRule} />
+                </View>
               )}
               {verses?.map((v) => (
                 <Pressable key={v.verse} onPress={() => toggleVerse(v.verse)}>
@@ -404,17 +476,104 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  bookChip: {
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 14,
+  continueCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: GOLD,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    marginBottom: 10,
+    shadowColor: '#8B6B2E',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  continueLabel: {
+    color: 'rgba(251,245,231,0.7)',
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  continueText: {
+    color: '#FBF5E7',
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: SERIF,
+    marginTop: 2,
+  },
+  continueArrow: {
+    color: '#FBF5E7',
+    fontSize: 26,
+  },
+  testamentTitle: {
+    color: INK,
+    fontSize: 22,
+    fontWeight: '600',
+    fontFamily: SERIF,
+    textAlign: 'center',
+    marginTop: 22,
+  },
+  testamentRule: {
+    width: 46,
+    height: 1,
+    backgroundColor: GOLD,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  groupLabel: {
+    color: GOLD,
+    fontSize: 11,
+    letterSpacing: 2.5,
+    fontWeight: '700',
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  groupCard: {
     backgroundColor: CARD,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: EDGE,
+    overflow: 'hidden',
   },
-  bookChipText: {
+  bookRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  bookRowLine: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(217,199,161,0.5)',
+  },
+  bookName: {
     color: INK,
-    fontSize: 14,
+    fontSize: 16,
+    fontFamily: SERIF,
+  },
+  bookChapters: {
+    color: INK_SOFT,
+    fontSize: 13,
+  },
+  chapterHead: {
+    alignItems: 'center',
+    marginBottom: 18,
+    marginTop: 6,
+  },
+  chapterHeadText: {
+    color: INK,
+    fontSize: 26,
+    fontWeight: '600',
+    fontFamily: SERIF,
+  },
+  chapterRule: {
+    width: 52,
+    height: 1,
+    backgroundColor: GOLD,
+    marginTop: 10,
   },
   chapterChip: {
     width: 52,
@@ -429,6 +588,7 @@ const styles = StyleSheet.create({
   chapterChipText: {
     color: INK,
     fontSize: 15,
+    fontFamily: SERIF,
   },
   verseLine: {
     color: INK,
