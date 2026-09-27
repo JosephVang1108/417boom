@@ -13,6 +13,7 @@ export interface JourneyStats {
   prayers: number;
   chapters: number;
   stories: number;
+  shares: number;
   lastDay: string | null;
 }
 
@@ -22,6 +23,7 @@ const EMPTY: JourneyStats = {
   prayers: 0,
   chapters: 0,
   stories: 0,
+  shares: 0,
   lastDay: null,
 };
 
@@ -58,7 +60,7 @@ export async function recordOpen(currentStreak: number): Promise<void> {
 }
 
 export async function bump(
-  kind: 'prayers' | 'chapters' | 'stories'
+  kind: 'prayers' | 'chapters' | 'stories' | 'shares'
 ): Promise<void> {
   await loadStats();
   cache[kind] += 1;
@@ -87,8 +89,8 @@ export function getBadges(s: JourneyStats): Badge[] {
   ): Badge => ({ id, emoji, name, desc, earned });
   return [
     b('first-light', '🌅', 'First Light', 'Opened the app for the first time', s.totalDays >= 1),
-    b('three-days', '🕊️', 'Three Days Walking', 'A 3-day streak together', s.bestStreak >= 3),
-    b('week-grace', '🔥', 'Week of Grace', 'A 7-day streak together', s.bestStreak >= 7),
+    b('three-days', '👣', 'Three Days Walking', 'A 3-day streak together', s.bestStreak >= 3),
+    b('week-grace', '🌿', 'Week of Grace', 'A 7-day streak together', s.bestStreak >= 7),
     b('faithful-month', '⭐', 'Faithful Month', 'A 30-day streak together', s.bestStreak >= 30),
     b('hundredfold', '👑', 'Hundredfold', 'A 100-day streak together', s.bestStreak >= 100),
     b('first-prayer', '🙏', 'First Prayer', 'Prayed together for the first time', s.prayers >= 1),
@@ -99,5 +101,9 @@ export function getBadges(s: JourneyStats): Badge[] {
     b('deep-in-word', '🏛️', 'Deep in the Word', '100 chapters opened', s.chapters >= 100),
     b('first-story', '✨', 'First Story', 'Heard your first story', s.stories >= 1),
     b('story-lover', '🌙', 'Story Lover', '10 stories heard', s.stories >= 10),
+    // Sharing light — its own track, earned by sharing verses.
+    b('lamp-stand', '🕯️', 'Lamp on a Stand', 'Shared your first verse', s.shares >= 1),
+    b('city-hill', '🌟', 'City on a Hill', '10 verses shared', s.shares >= 10),
+    b('salt-light', '🧂', 'Salt & Light', '25 verses shared', s.shares >= 25),
   ];
 }

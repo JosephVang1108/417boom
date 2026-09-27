@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   Modal,
   Platform,
   Pressable,
@@ -8,7 +9,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import * as journal from '../lib/journal';
 import {
   Badge,
@@ -22,14 +22,41 @@ interface Props {
   visible: boolean;
   streak: number;
   onClose: () => void;
+  onOpenBible: () => void;
+  onTellStory: (ask: string) => void;
 }
 
+const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' });
+
+// The story shelf, in order of popularity. The first is free; the rest
+// unlock with Premium at launch. (For now he'll still tell any story
+// you ask him for out loud — this shelf is the browsing experience.)
+const STORIES: { title: string; ask: string; emoji: string; free?: boolean }[] = [
+  { title: 'David & Goliath', ask: 'David and Goliath', emoji: '🪨', free: true },
+  { title: 'The Birth of Jesus', ask: 'the birth of Jesus', emoji: '⭐' },
+  { title: 'The Resurrection', ask: 'the resurrection of Jesus', emoji: '🌅' },
+  { title: 'Noah & the Flood', ask: 'Noah and the flood', emoji: '🌈' },
+  { title: 'The Exodus', ask: 'the Exodus', emoji: '🌊' },
+  { title: "Daniel in the Lions' Den", ask: "Daniel in the lions' den", emoji: '🦁' },
+  { title: 'Jonah & the Great Fish', ask: 'Jonah and the great fish', emoji: '🐋' },
+  { title: 'The Prodigal Son', ask: 'the prodigal son', emoji: '🏡' },
+  { title: 'Creation', ask: 'the creation of the world', emoji: '🌍' },
+  { title: 'Queen Esther', ask: 'Queen Esther', emoji: '💛' },
+];
+
 /**
- * Your Journey: the walk so far — streak, lifetime moments, badges
- * earned and still ahead, and the prayers recently carried together.
+ * Your Journey: a warm parchment page — the walk so far, a door into
+ * the Bible, the story shelf, badges in a carousel, recent prayers.
  */
-export default function JourneyScreen({ visible, streak, onClose }: Props) {
+export default function JourneyScreen({
+  visible,
+  streak,
+  onClose,
+  onOpenBible,
+  onTellStory,
+}: Props) {
   const [stats, setStats] = useState<JourneyStats>(getStats());
+  const [badgesOpen, setBadgesOpen] = useState(false);
 
   useEffect(() => {
     if (visible) loadStats().then((s) => setStats({ ...s }));
@@ -39,15 +66,25 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
   const earned = badges.filter((b) => b.earned);
   const prayers = journal.getJournal().slice(0, 3);
 
-  // Progress toward the next streak badge.
   const streakGoals: { target: number; label: string }[] = [
-    { target: 3, label: '🕊️ Three Days Walking' },
-    { target: 7, label: '🔥 Week of Grace' },
+    { target: 3, label: '👣 Three Days Walking' },
+    { target: 7, label: '🌿 Week of Grace' },
     { target: 30, label: '⭐ Faithful Month' },
     { target: 100, label: '👑 Hundredfold' },
   ];
   const nowStreak = Math.max(streak, 1);
   const nextGoal = streakGoals.find((g) => g.target > nowStreak);
+
+  const openStory = (s: (typeof STORIES)[number]) => {
+    if (s.free) {
+      onTellStory(s.ask);
+      return;
+    }
+    Alert.alert(
+      'A Premium story',
+      'All the stories unlock with Premium when we launch. David & Goliath is yours free today — or simply ask him for any story out loud.'
+    );
+  };
 
   const badgeCard = (b: Badge) => (
     <View key={b.id} style={[styles.badge, !b.earned && styles.badgeLocked]}>
@@ -65,18 +102,6 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
       onRequestClose={onClose}
     >
       <View style={styles.root}>
-        {/* Soft dawn glow at the top of the page */}
-        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-          <Defs>
-            <RadialGradient id="journeyDawn" cx="50%" cy="8%" r="60%">
-              <Stop offset="0%" stopColor="#B9964E" stopOpacity="0.22" />
-              <Stop offset="60%" stopColor="#B9964E" stopOpacity="0.05" />
-              <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Circle cx="50%" cy="8%" r="60%" fill="url(#journeyDawn)" />
-        </Svg>
-
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Your Journey</Text>
           <Pressable onPress={onClose} hitSlop={12}>
@@ -85,13 +110,14 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
+          {/* The walk so far */}
           <View style={styles.streakCard}>
-            <Text style={styles.streakFlame}>🔥</Text>
+            <Text style={styles.streakDove}>🕊️</Text>
             <Text style={styles.streakBig}>Day {nowStreak}</Text>
             <Text style={styles.streakTogether}>walking together</Text>
             <Text style={styles.streakSub}>
-              Best streak {Math.max(stats.bestStreak, streak)} · {stats.totalDays}{' '}
-              {stats.totalDays === 1 ? 'day' : 'days'} in all
+              Best streak {Math.max(stats.bestStreak, streak)} ·{' '}
+              {stats.totalDays} {stats.totalDays === 1 ? 'day' : 'days'} in all
             </Text>
             {nextGoal && (
               <View style={styles.goalWrap}>
@@ -117,6 +143,15 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
             )}
           </View>
 
+          {/* Straight into the Word */}
+          <Pressable style={styles.bibleButton} onPress={onOpenBible}>
+            <Text style={styles.bibleButtonText}>📖  Open the Bible</Text>
+            <Text style={styles.bibleButtonSub}>
+              Read, or have it read to you
+            </Text>
+          </Pressable>
+
+          {/* Lifetime moments */}
           <View style={styles.countRow}>
             <View style={styles.countCard}>
               <Text style={styles.countNum}>{stats.prayers}</Text>
@@ -130,13 +165,55 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
               <Text style={styles.countNum}>{stats.stories}</Text>
               <Text style={styles.countLabel}>stories</Text>
             </View>
+            <View style={styles.countCard}>
+              <Text style={styles.countNum}>{stats.shares}</Text>
+              <Text style={styles.countLabel}>shared</Text>
+            </View>
           </View>
 
-          <Text style={styles.sectionTitle}>
-            Badges · {earned.length} of {badges.length}
-          </Text>
-          <View style={styles.badgeGrid}>{badges.map(badgeCard)}</View>
+          {/* Stories he can tell */}
+          <Text style={styles.sectionTitle}>Stories he tells</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carousel}
+          >
+            {STORIES.map((s) => (
+              <Pressable
+                key={s.title}
+                style={styles.storyCard}
+                onPress={() => openStory(s)}
+              >
+                <Text style={styles.storyEmoji}>{s.emoji}</Text>
+                <Text style={styles.storyTitle}>{s.title}</Text>
+                <Text style={[styles.storyTag, s.free && styles.storyTagFree]}>
+                  {s.free ? 'FREE' : '🔒 PREMIUM'}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
 
+          {/* Badges, tucked into a drawer */}
+          <Pressable
+            style={styles.badgeHeader}
+            onPress={() => setBadgesOpen((o) => !o)}
+          >
+            <Text style={styles.sectionTitle}>
+              Badges · {earned.length} of {badges.length}
+            </Text>
+            <Text style={styles.badgeChevron}>{badgesOpen ? '▾' : '▸'}</Text>
+          </Pressable>
+          {badgesOpen && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.carousel}
+            >
+              {badges.map(badgeCard)}
+            </ScrollView>
+          )}
+
+          {/* Prayers being carried */}
           {prayers.length > 0 && (
             <>
               <Text style={styles.sectionTitle}>Prayers we're carrying</Text>
@@ -154,8 +231,8 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
           )}
 
           <Text style={styles.footerNote}>
-            Every day you open the app, every prayer, every chapter and
-            story counts. Keep walking.
+            Every day you open the app, every prayer, chapter, story, and
+            verse you share counts. Keep walking.
           </Text>
         </ScrollView>
       </View>
@@ -163,10 +240,18 @@ export default function JourneyScreen({ visible, streak, onClose }: Props) {
   );
 }
 
+// A warm parchment palette — like the page of a well-loved Bible.
+const PAPER = '#F4EBD8';
+const CARD = '#FBF5E7';
+const EDGE = '#D9C7A1';
+const INK = '#3E3121';
+const INK_SOFT = '#8A7A5C';
+const GOLD = '#8B6B2E';
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: PAPER,
     paddingTop: 54,
   },
   header: {
@@ -176,15 +261,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: EDGE,
   },
   headerTitle: {
-    color: '#F0E6CE',
-    fontSize: 17,
+    color: INK,
+    fontSize: 20,
     fontWeight: '600',
+    fontFamily: SERIF,
   },
   headerButton: {
-    color: '#B9964E',
+    color: GOLD,
     fontSize: 15,
   },
   content: {
@@ -196,31 +282,34 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: 'rgba(185,150,78,0.1)',
+    backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: 'rgba(185,150,78,0.45)',
-    shadowColor: '#B9964E',
-    shadowOpacity: 0.35,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 0 },
+    borderColor: EDGE,
+    shadowColor: '#8B6B2E',
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  streakFlame: {
+  streakDove: {
     fontSize: 30,
   },
   streakBig: {
-    color: '#F0E6CE',
-    fontSize: 40,
+    color: INK,
+    fontSize: 42,
     fontWeight: '700',
     marginTop: 4,
-    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+    fontFamily: SERIF,
   },
   streakTogether: {
-    color: '#C8A45C',
+    color: GOLD,
     fontSize: 14,
     marginTop: 2,
+    fontStyle: 'italic',
+    fontFamily: SERIF,
   },
   streakSub: {
-    color: '#9A9A90',
+    color: INK_SOFT,
     fontSize: 12,
     marginTop: 10,
   },
@@ -231,113 +320,173 @@ const styles = StyleSheet.create({
   goalTrack: {
     height: 7,
     borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(139,107,46,0.15)',
     overflow: 'hidden',
   },
   goalFill: {
     height: '100%',
     borderRadius: 4,
-    backgroundColor: '#B9964E',
+    backgroundColor: GOLD,
   },
   goalText: {
-    color: '#C8A45C',
+    color: INK_SOFT,
     fontSize: 12,
     marginTop: 8,
     textAlign: 'center',
   },
+  bibleButton: {
+    marginTop: 14,
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: GOLD,
+    shadowColor: '#8B6B2E',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  bibleButtonText: {
+    color: '#FBF5E7',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  bibleButtonSub: {
+    color: 'rgba(251,245,231,0.75)',
+    fontSize: 12,
+    marginTop: 3,
+  },
   countRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
+    gap: 8,
+    marginTop: 14,
   },
   countCard: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: EDGE,
   },
   countNum: {
-    color: '#F0E6CE',
-    fontSize: 22,
+    color: INK,
+    fontSize: 20,
     fontWeight: '700',
+    fontFamily: SERIF,
   },
   countLabel: {
-    color: '#9A9A90',
-    fontSize: 12,
+    color: INK_SOFT,
+    fontSize: 11,
     marginTop: 2,
   },
   sectionTitle: {
-    color: '#C8A45C',
-    fontSize: 14,
+    color: GOLD,
+    fontSize: 15,
     fontWeight: '700',
     marginTop: 26,
     marginBottom: 12,
+    fontFamily: SERIF,
   },
-  badgeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  carousel: {
     gap: 10,
+    paddingRight: 18,
   },
-  badge: {
-    width: '47.5%',
+  storyCard: {
+    width: 132,
     borderRadius: 16,
     padding: 14,
-    backgroundColor: 'rgba(185,150,78,0.14)',
+    backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: 'rgba(185,150,78,0.5)',
+    borderColor: EDGE,
     alignItems: 'center',
-    shadowColor: '#B9964E',
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
+  },
+  storyEmoji: {
+    fontSize: 28,
+  },
+  storyTitle: {
+    color: INK,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
+    minHeight: 34,
+  },
+  storyTag: {
+    color: INK_SOFT,
+    fontSize: 10,
+    letterSpacing: 1,
+    marginTop: 6,
+  },
+  storyTagFree: {
+    color: GOLD,
+    fontWeight: '700',
+  },
+  badgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 4,
+  },
+  badgeChevron: {
+    color: GOLD,
+    fontSize: 16,
+    marginTop: 24,
+  },
+  badge: {
+    width: 128,
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: '#C9AE6E',
+    alignItems: 'center',
   },
   badgeLocked: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.1)',
-    opacity: 0.45,
-    shadowOpacity: 0,
+    borderColor: EDGE,
+    opacity: 0.5,
   },
   badgeEmoji: {
-    fontSize: 30,
+    fontSize: 28,
   },
   badgeName: {
-    color: '#F0E6CE',
-    fontSize: 14,
+    color: INK,
+    fontSize: 13,
     fontWeight: '600',
     marginTop: 6,
     textAlign: 'center',
   },
   badgeDesc: {
-    color: '#9A9A90',
-    fontSize: 11,
+    color: INK_SOFT,
+    fontSize: 10,
     marginTop: 3,
     textAlign: 'center',
   },
   prayerCard: {
     borderRadius: 14,
     padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: EDGE,
     marginBottom: 8,
   },
   prayerText: {
-    color: '#E4E4DC',
+    color: INK,
     fontSize: 14,
   },
   prayerDate: {
-    color: '#6E6E66',
+    color: INK_SOFT,
     fontSize: 11,
     marginTop: 4,
   },
   footerNote: {
-    color: '#6E6E66',
+    color: INK_SOFT,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 30,
     paddingHorizontal: 20,
+    fontStyle: 'italic',
+    fontFamily: SERIF,
   },
 });

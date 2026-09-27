@@ -3,8 +3,10 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -39,7 +41,43 @@ export default function BibleScreen({ visible, onClose }: Props) {
   const [failed, setFailed] = useState(false);
   const [reading, setReading] = useState(false);
   const [readerId, setReaderId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const readingRef = useRef(false);
+
+  const toggleVerse = (n: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(n)) next.delete(n);
+      else next.add(n);
+      return next;
+    });
+  };
+
+  // Share the highlighted verses — and it counts toward the
+  // sharing-light badges.
+  const shareSelected = async () => {
+    if (!verses || !book || !chapter || selected.size === 0) return;
+    const nums = [...selected].sort((a, b) => a - b);
+    const text = verses
+      .filter((v) => selected.has(v.verse))
+      .map((v) => v.text.trim())
+      .join(' ');
+    const ref =
+      nums.length === 1
+        ? `${book.name} ${chapter}:${nums[0]}`
+        : `${book.name} ${chapter}:${nums[0]}–${nums[nums.length - 1]}`;
+    try {
+      const result = await Share.share({
+        message: `“${text}” — ${ref}\n\nShared from Abide 🙏`,
+      });
+      if (result.action === Share.sharedAction) {
+        stats.bump('shares');
+        setSelected(new Set());
+      }
+    } catch {
+      // share sheet dismissed or unavailable — nothing to do
+    }
+  };
 
   useEffect(() => {
     if (visible) setReaderId(voice.getReaderVoice());
@@ -56,6 +94,7 @@ export default function BibleScreen({ visible, onClose }: Props) {
       setLoading(true);
       setFailed(false);
       setVerses(null);
+      setSelected(new Set());
       fetchChapter(book.name, chapter).then((v) => {
         setVerses(v);
         setFailed(!v);
@@ -227,12 +266,40 @@ export default function BibleScreen({ visible, onClose }: Props) {
                 </Text>
               )}
               {verses?.map((v) => (
-                <Text key={v.verse} style={styles.verseLine}>
-                  <Text style={styles.verseNum}>{v.verse} </Text>
-                  {v.text}
-                </Text>
+                <Pressable key={v.verse} onPress={() => toggleVerse(v.verse)}>
+                  <Text
+                    style={[
+                      styles.verseLine,
+                      selected.has(v.verse) && styles.verseSelected,
+                    ]}
+                  >
+                    <Text style={styles.verseNum}>{v.verse} </Text>
+                    {v.text}
+                  </Text>
+                </Pressable>
               ))}
+              {verses && (
+                <Text style={styles.shareHint}>
+                  Tap a verse to highlight it, then share it with someone.
+                </Text>
+              )}
             </ScrollView>
+            {verses && selected.size > 0 && (
+              <View style={styles.shareBar}>
+                <Pressable style={styles.shareButton} onPress={shareSelected}>
+                  <Text style={styles.shareButtonText}>
+                    🕊️ Share {selected.size}{' '}
+                    {selected.size === 1 ? 'verse' : 'verses'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setSelected(new Set())}
+                  hitSlop={10}
+                >
+                  <Text style={styles.shareCancel}>Clear</Text>
+                </Pressable>
+              </View>
+            )}
             {verses && (
               <View style={styles.voiceRow}>
                 <Text style={styles.voiceLabel}>Reading voice</Text>
@@ -282,10 +349,20 @@ export default function BibleScreen({ visible, onClose }: Props) {
   );
 }
 
+// A warm parchment palette — reading here should feel like the page
+// of a well-loved Bible.
+const PAPER = '#F4EBD8';
+const CARD = '#FBF5E7';
+const EDGE = '#D9C7A1';
+const INK = '#3E3121';
+const INK_SOFT = '#8A7A5C';
+const GOLD = '#8B6B2E';
+const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' });
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: PAPER,
     paddingTop: 54,
   },
   header: {
@@ -295,27 +372,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: EDGE,
   },
   headerButton: {
-    color: '#B9964E',
+    color: GOLD,
     fontSize: 15,
   },
   headerTitle: {
-    color: '#F0E6CE',
-    fontSize: 17,
+    color: INK,
+    fontSize: 19,
     fontWeight: '600',
+    fontFamily: SERIF,
   },
   content: {
     padding: 18,
     paddingBottom: 40,
   },
   sectionTitle: {
-    color: '#C8A45C',
-    fontSize: 14,
+    color: GOLD,
+    fontSize: 15,
     fontWeight: '700',
     marginTop: 12,
     marginBottom: 12,
+    fontFamily: SERIF,
   },
   grid: {
     flexDirection: 'row',
@@ -326,51 +405,89 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 9,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: EDGE,
   },
   bookChipText: {
-    color: '#E8E8E2',
+    color: INK,
     fontSize: 14,
   },
   chapterChip: {
     width: 52,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: EDGE,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chapterChipText: {
-    color: '#E8E8E2',
+    color: INK,
     fontSize: 15,
   },
   verseLine: {
-    color: '#E4E4DC',
-    fontSize: 17,
-    lineHeight: 28,
+    color: INK,
+    fontSize: 18,
+    lineHeight: 30,
     marginBottom: 10,
+    fontFamily: SERIF,
+  },
+  verseSelected: {
+    backgroundColor: 'rgba(185,150,78,0.28)',
+    borderRadius: 6,
   },
   verseNum: {
-    color: '#B9964E',
+    color: GOLD,
     fontSize: 12,
     fontWeight: '700',
   },
+  shareHint: {
+    color: INK_SOFT,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 18,
+    fontStyle: 'italic',
+    fontFamily: SERIF,
+  },
   errorText: {
-    color: '#C9C9C2',
+    color: INK_SOFT,
     fontSize: 15,
     textAlign: 'center',
     marginTop: 40,
     paddingHorizontal: 20,
   },
   translationNote: {
-    color: '#6E6E66',
+    color: INK_SOFT,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 28,
+  },
+  shareBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: EDGE,
+  },
+  shareButton: {
+    flex: 1,
+    backgroundColor: GOLD,
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  shareButtonText: {
+    color: CARD,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  shareCancel: {
+    color: INK_SOFT,
+    fontSize: 14,
   },
   voiceRow: {
     flexDirection: 'row',
@@ -379,10 +496,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: EDGE,
   },
   voiceLabel: {
-    color: '#6E6E66',
+    color: INK_SOFT,
     fontSize: 12,
     marginRight: 2,
   },
@@ -391,18 +508,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: EDGE,
+    backgroundColor: CARD,
   },
   voiceChipActive: {
-    backgroundColor: 'rgba(185,150,78,0.22)',
-    borderColor: '#B9964E',
+    backgroundColor: 'rgba(139,107,46,0.18)',
+    borderColor: GOLD,
   },
   voiceChipText: {
-    color: '#C9C9C2',
+    color: INK_SOFT,
     fontSize: 13,
   },
   voiceChipTextActive: {
-    color: '#F0E6CE',
+    color: INK,
     fontWeight: '600',
   },
   readBar: {
@@ -416,24 +534,25 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: EDGE,
+    backgroundColor: CARD,
   },
   navButtonText: {
-    color: '#E8E8E2',
+    color: INK,
     fontSize: 14,
   },
   readButton: {
     flex: 1,
-    backgroundColor: '#B9964E',
+    backgroundColor: GOLD,
     borderRadius: 14,
     paddingVertical: 13,
     alignItems: 'center',
   },
   readButtonActive: {
-    backgroundColor: 'rgba(200, 80, 60, 0.9)',
+    backgroundColor: 'rgba(160, 70, 50, 0.95)',
   },
   readButtonText: {
-    color: '#0A0A0A',
+    color: CARD,
     fontSize: 15,
     fontWeight: '700',
   },
