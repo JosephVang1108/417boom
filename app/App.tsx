@@ -86,6 +86,7 @@ export default function App() {
   const [bibleOpen, setBibleOpen] = useState(false);
   const [journeyOpen, setJourneyOpen] = useState(false);
   const [devotionalVisible, setDevotionalVisible] = useState(false);
+  const [devotionalDate, setDevotionalDate] = useState<Date | null>(null);
   const [streak, setStreak] = useState(0);
   const [verseEnabled, setVerseEnabled] = useState(false);
 
@@ -642,9 +643,15 @@ export default function App() {
           <DailyDevotional
             visible={devotionalVisible}
             streak={streak}
+            forDate={devotionalDate}
             onDone={() => {
-              dailyVerse.markDevotionalSeen();
+              // Revisiting an old morning doesn't use up today's showing.
+              const d = devotionalDate ?? new Date();
+              if (d.toDateString() === new Date().toDateString()) {
+                dailyVerse.markDevotionalSeen();
+              }
               setDevotionalVisible(false);
+              setDevotionalDate(null);
               markActive();
             }}
           />
@@ -661,9 +668,10 @@ export default function App() {
               setJourneyOpen(false);
               setBibleOpen(true);
             }}
-            onOpenDevotional={() => {
+            onOpenDevotional={(date) => {
               markActive();
               setJourneyOpen(false);
+              setDevotionalDate(date ?? null);
               setDevotionalVisible(true);
             }}
             onTellStory={(ask) => {

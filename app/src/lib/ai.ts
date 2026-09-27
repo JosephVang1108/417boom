@@ -2,7 +2,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import * as SecureStore from 'expo-secure-store';
 import { z } from 'zod';
-import { BACKEND_TOKEN, BACKEND_URL, backendConfigured } from './config';
+import {
+  BACKEND_TOKEN,
+  BACKEND_URL,
+  backendConfigured,
+  FREE_STORY,
+  PREMIUM_UNLOCKED,
+} from './config';
 import { GuideResponse } from './guide';
 import { recentPrayersForPrompt } from './journal';
 import { getAbout, getName } from './profile';
@@ -46,6 +52,9 @@ function systemPrompt(): string {
   const name = getName();
   const about = getAbout();
   let prompt = SYSTEM_PROMPT;
+  if (!PREMIUM_UNLOCKED) {
+    prompt += `\n\nStory access (free listener): the one FULL story you may tell is ${FREE_STORY}. If they ask for any other Bible story, don't tell it in full and don't refuse coldly. Instead, in 2–3 warm sentences: give them one vivid line from that story — a taste, not a summary — then say gently that the full tellings live in Abide Premium, which is what keeps this place open, and offer: "But ${FREE_STORY}? That one's yours anytime — shall I tell it?" Never pressure, never mention prices, never say "upgrade now". Set is_story false for these replies. Answering QUESTIONS about scripture, people, and verses stays fully free — this only limits the long dramatic tellings.`;
+  }
   if (name) {
     prompt += `\n\nThe person's name is ${name}. Weave their name in naturally and warmly now and then — especially in prayers — but not in every message.`;
   }

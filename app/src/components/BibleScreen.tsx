@@ -51,6 +51,29 @@ const NT_GROUPS = [
 ];
 
 const LAST_POS_KEY = 'bible_last_position';
+const ORDER_KEY = 'bible_book_order';
+
+// Timeline order: the books arranged by when their events happened,
+// so a first-time reader can walk the story from beginning to end.
+const byName = (names: string[]): BibleBook[] =>
+  names
+    .map((n) => ALL_BOOKS.find((b) => b.name === n))
+    .filter((b): b is BibleBook => !!b);
+
+const TIMELINE_GROUPS = [
+  { title: 'Creation & the Patriarchs', books: byName(['Genesis', 'Job']) },
+  { title: 'Out of Egypt', books: byName(['Exodus', 'Leviticus', 'Numbers', 'Deuteronomy']) },
+  { title: 'Entering the Land', books: byName(['Joshua', 'Judges', 'Ruth']) },
+  { title: 'The Kingdom Rises', books: byName(['1 Samuel', '2 Samuel', '1 Chronicles', 'Psalms']) },
+  { title: 'Solomon & the Wisdom Years', books: byName(['1 Kings', '2 Chronicles', 'Proverbs', 'Ecclesiastes', 'Song of Solomon']) },
+  { title: 'The Kingdom Divides · Prophets Speak', books: byName(['2 Kings', 'Obadiah', 'Joel', 'Jonah', 'Amos', 'Hosea', 'Isaiah', 'Micah', 'Nahum', 'Zephaniah', 'Jeremiah', 'Habakkuk', 'Lamentations']) },
+  { title: 'Exile in Babylon', books: byName(['Ezekiel', 'Daniel']) },
+  { title: 'The Return Home', books: byName(['Ezra', 'Haggai', 'Zechariah', 'Esther', 'Nehemiah', 'Malachi']) },
+  { title: 'Jesus Walks the Earth', books: byName(['Matthew', 'Mark', 'Luke', 'John']) },
+  { title: 'The Church Is Born', books: byName(['Acts', 'James', 'Galatians', '1 Thessalonians', '2 Thessalonians', '1 Corinthians', '2 Corinthians', 'Romans']) },
+  { title: 'Letters to the Churches', books: byName(['Ephesians', 'Philippians', 'Colossians', 'Philemon', '1 Timothy', 'Titus', '2 Timothy', '1 Peter', '2 Peter', 'Hebrews', 'Jude', '1 John', '2 John', '3 John']) },
+  { title: 'The End & the New Beginning', books: byName(['Revelation']) },
+];
 
 export default function BibleScreen({ visible, onClose }: Props) {
   const [book, setBook] = useState<BibleBook | null>(null);
@@ -65,6 +88,7 @@ export default function BibleScreen({ visible, onClose }: Props) {
     book: string;
     chapter: number;
   } | null>(null);
+  const [order, setOrder] = useState<'traditional' | 'timeline'>('traditional');
   const readingRef = useRef(false);
 
   useEffect(() => {
@@ -72,8 +96,16 @@ export default function BibleScreen({ visible, onClose }: Props) {
       AsyncStorage.getItem(LAST_POS_KEY)
         .then((raw) => raw && setLastPos(JSON.parse(raw)))
         .catch(() => {});
+      AsyncStorage.getItem(ORDER_KEY)
+        .then((raw) => raw === 'timeline' && setOrder('timeline'))
+        .catch(() => {});
     }
   }, [visible]);
+
+  const pickOrder = (o: 'traditional' | 'timeline') => {
+    setOrder(o);
+    AsyncStorage.setItem(ORDER_KEY, o).catch(() => {});
+  };
 
   const continueReading = () => {
     if (!lastPos) return;
@@ -298,8 +330,54 @@ export default function BibleScreen({ visible, onClose }: Props) {
                 <Text style={styles.continueArrow}>›</Text>
               </Pressable>
             )}
-            {testament('The New Testament', NT_GROUPS)}
-            {testament('The Old Testament', OT_GROUPS)}
+            <View style={styles.orderRow}>
+              <Pressable
+                style={[
+                  styles.orderChip,
+                  order === 'traditional' && styles.orderChipActive,
+                ]}
+                onPress={() => pickOrder('traditional')}
+              >
+                <Text
+                  style={[
+                    styles.orderChipText,
+                    order === 'traditional' && styles.orderChipTextActive,
+                  ]}
+                >
+                  Traditional
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.orderChip,
+                  order === 'timeline' && styles.orderChipActive,
+                ]}
+                onPress={() => pickOrder('timeline')}
+              >
+                <Text
+                  style={[
+                    styles.orderChipText,
+                    order === 'timeline' && styles.orderChipTextActive,
+                  ]}
+                >
+                  Timeline
+                </Text>
+              </Pressable>
+            </View>
+            {order === 'timeline' ? (
+              <>
+                <Text style={styles.timelineNote}>
+                  The whole story, in the order it happened — from creation
+                  to the new creation.
+                </Text>
+                {TIMELINE_GROUPS.map((g) => bookGroup(g.title, g.books))}
+              </>
+            ) : (
+              <>
+                {testament('The New Testament', NT_GROUPS)}
+                {testament('The Old Testament', OT_GROUPS)}
+              </>
+            )}
             <Text style={styles.translationNote}>World English Bible (public domain)</Text>
           </ScrollView>
         )}
@@ -506,6 +584,40 @@ const styles = StyleSheet.create({
   continueArrow: {
     color: '#FBF5E7',
     fontSize: 26,
+  },
+  orderRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+  },
+  orderChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 9,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: EDGE,
+    backgroundColor: CARD,
+  },
+  orderChipActive: {
+    backgroundColor: 'rgba(139,107,46,0.16)',
+    borderColor: GOLD,
+  },
+  orderChipText: {
+    color: INK_SOFT,
+    fontSize: 14,
+  },
+  orderChipTextActive: {
+    color: INK,
+    fontWeight: '600',
+  },
+  timelineNote: {
+    color: INK_SOFT,
+    fontSize: 12,
+    fontStyle: 'italic',
+    fontFamily: SERIF,
+    textAlign: 'center',
+    marginTop: 14,
   },
   testamentTitle: {
     color: INK,
