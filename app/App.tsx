@@ -42,6 +42,7 @@ import * as journal from './src/lib/journal';
 import { touchStreak } from './src/lib/streak';
 import * as stats from './src/lib/stats';
 import JourneyScreen from './src/components/JourneyScreen';
+import DailyDevotional from './src/components/DailyDevotional';
 import {
   displayText,
   encouragement,
@@ -82,6 +83,7 @@ export default function App() {
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [bibleOpen, setBibleOpen] = useState(false);
   const [journeyOpen, setJourneyOpen] = useState(false);
+  const [devotionalVisible, setDevotionalVisible] = useState(false);
   const [streak, setStreak] = useState(0);
   const [verseEnabled, setVerseEnabled] = useState(false);
 
@@ -110,6 +112,7 @@ export default function App() {
       settingsOpen ||
       bibleOpen ||
       journeyOpen ||
+      devotionalVisible ||
       onboardingVisible ||
       history.length === 0,
     voiceOn,
@@ -170,7 +173,12 @@ export default function App() {
     });
     profile.loadProfile().then(({ name, onboarded }) => {
       setUserName(name ?? '');
-      if (!onboarded) setOnboardingVisible(true);
+      if (!onboarded) {
+        setOnboardingVisible(true);
+      } else {
+        // Returning visitor: the morning devotional, once per day.
+        dailyVerse.shouldShowDevotional().then(setDevotionalVisible);
+      }
     });
     touchStreak().then((s) => {
       setStreak(s);
@@ -625,6 +633,16 @@ export default function App() {
           <OnboardingModal
             visible={onboardingVisible}
             onComplete={completeOnboarding}
+          />
+
+          <DailyDevotional
+            visible={devotionalVisible}
+            streak={streak}
+            onDone={() => {
+              dailyVerse.markDevotionalSeen();
+              setDevotionalVisible(false);
+              markActive();
+            }}
           />
 
           <JourneyScreen
