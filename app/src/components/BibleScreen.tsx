@@ -16,6 +16,7 @@ import {
   NEW_TESTAMENT,
   OLD_TESTAMENT,
 } from '../data/bibleBooks';
+import * as stats from '../lib/stats';
 import * as voice from '../lib/voice';
 
 interface Props {
@@ -59,6 +60,7 @@ export default function BibleScreen({ visible, onClose }: Props) {
         setVerses(v);
         setFailed(!v);
         setLoading(false);
+        if (v) stats.bump('chapters'); // counts toward Journey badges
       });
     }
   }, [book, chapter]);
