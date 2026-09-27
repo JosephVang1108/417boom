@@ -652,6 +652,16 @@ export default function App() {
               markActive();
               setJourneyOpen(false);
             }}
+            onOpenBible={() => {
+              markActive();
+              setJourneyOpen(false);
+              setBibleOpen(true);
+            }}
+            onTellStory={(ask) => {
+              markActive();
+              setJourneyOpen(false);
+              send(`Tell me the story of ${ask}.`);
+            }}
           />
 
           <BibleScreen
