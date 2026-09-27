@@ -35,6 +35,7 @@ import {
   resetConversation,
   setApiKey,
 } from './src/lib/ai';
+import { cleanForDisplay } from './src/lib/clean';
 import { backendConfigured } from './src/lib/config';
 import * as dailyVerse from './src/lib/dailyVerse';
 import * as journal from './src/lib/journal';
@@ -333,7 +334,10 @@ export default function App() {
     const question = (spokenQuestion ?? input).trim();
     if (!question) return;
     const id = nextId.current++;
-    setHistory((h) => [...h, { id, question, response: null }]);
+    // The screen (and anything stored) never shows profanity or slurs;
+    // the original still goes to the AI so he can answer it with grace.
+    const shown = cleanForDisplay(question);
+    setHistory((h) => [...h, { id, question: shown, response: null }]);
     setInput('');
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
 
@@ -346,7 +350,7 @@ export default function App() {
     if (!response) response = respond(question);
 
     setHistory((h) => h.map((ex) => (ex.id === id ? { ...ex, response } : ex)));
-    if (response.isPrayer) journal.addPrayer(question);
+    if (response.isPrayer) journal.addPrayer(shown);
     if (voiceOn) speak(response);
   };
 
