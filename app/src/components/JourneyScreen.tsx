@@ -94,7 +94,7 @@ export default function JourneyScreen({
     }
     Alert.alert(
       'This telling is waiting for you',
-      'The full stories live in Abide Premium — that’s what keeps this place open and growing. David & Goliath is yours anytime, and he’d love to tell it.'
+      'The full stories live in Abba Premium — that’s what keeps this place open and growing. David & Goliath is yours anytime, and he’d love to tell it.'
     );
   };
 
