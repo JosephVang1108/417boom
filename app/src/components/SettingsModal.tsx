@@ -103,7 +103,7 @@ export default function SettingsModal({
 
             {backendMode && (
               <>
-                <Text style={styles.section}>Abide service</Text>
+                <Text style={styles.section}>Abba service</Text>
                 <Text style={styles.status}>
                   ✓ Connected — conversations and voice are ready
                 </Text>

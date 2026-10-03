@@ -1,6 +1,6 @@
-# Abide — Launch Plan & Roadmap
+# Abba — Launch Plan & Roadmap
 
-*Working name "Abide" must change before store launch (name taken by Guideposts' meditation app). Pick the new name during the TestFlight build.*
+*Name chosen: **Abba** — the Father's name. Bundle ID com.fourseventeenboom.abba. See BUILD.md for the TestFlight steps.*
 
 ---
 

@@ -15,7 +15,7 @@ export const READER_VOICES = [
   { key: 'sarah', label: 'Sarah (female)', id: 'EXAVITQu4vr4xnSDxMaL' },
 ] as const;
 
-// The "Abide" voice — designed with ElevenLabs Voice Design: deep,
+// The "Abba" voice — designed with ElevenLabs Voice Design: deep,
 // soft-spoken, ancient yet kind. Falls back to "Brian" (deep, calm)
 // for accounts that don't have it.
 const ELEVEN_VOICE_ID = 'R9YQn8ytiYIfkeIr8wyN';
@@ -216,7 +216,7 @@ export async function synthesize(
     if (!res || !res.ok) return null;
 
     const bytes = new Uint8Array(await res.arrayBuffer());
-    const path = `${FileSystem.cacheDirectory}abide-voice-${++fileCounter}.mp3`;
+    const path = `${FileSystem.cacheDirectory}abba-voice-${++fileCounter}.mp3`;
     await FileSystem.writeAsStringAsync(path, toBase64(bytes), {
       encoding: FileSystem.EncodingType.Base64,
     });
@@ -385,7 +385,7 @@ export interface TranscribeResult {
  * Transcribe a recorded audio file with ElevenLabs speech-to-text.
  */
 export async function transcribe(uri: string): Promise<TranscribeResult> {
-  // Backend mode: send the recording to the Abide server.
+  // Backend mode: send the recording to the Abba server.
   if (backendConfigured()) {
     try {
       const audioBase64 = await FileSystem.readAsStringAsync(uri, {

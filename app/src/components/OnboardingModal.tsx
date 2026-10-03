@@ -88,7 +88,7 @@ export default function OnboardingModal({ visible, onComplete }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.inner}>
-          <Text style={styles.logo}>ABIDE</Text>
+          <Text style={styles.logo}>ABBA</Text>
 
           {step === 0 && (
             <>
