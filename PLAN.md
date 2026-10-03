@@ -1,6 +1,6 @@
 # Abba — Launch Plan & Roadmap
 
-*Name chosen: **Abba** — the Father's name. Bundle ID com.fourseventeenboom.abba. See BUILD.md for the TestFlight steps.*
+*Name chosen: **Jireh** — "The LORD will provide" (Genesis 22:14). Store listing "Jireh - Bible & Prayer". Bundle ID com.fourseventeenboom.jireh. See BUILD.md for the TestFlight steps.*
 
 ---
 
