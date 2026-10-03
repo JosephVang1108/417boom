@@ -15,18 +15,14 @@ npm install
 
 ## Step 2 — Put the app icon in place
 
-Pick the icon you like (Claude shows the 3 candidates in chat), then run
-the matching command. For icon candidate #2 (dove in gold ring medallion):
+The chosen icon: **half his face in golden light, slim gold cross on the
+left border**. Run these three lines:
 
 ```powershell
-Invoke-WebRequest "https://g.tlcdn.com/gen/47541f48e6bb4f9e863356312a0c17a1.png" -OutFile assets\icon.png
-Invoke-WebRequest "https://g.tlcdn.com/gen/47541f48e6bb4f9e863356312a0c17a1.png" -OutFile assets\splash-icon.png
-Invoke-WebRequest "https://g.tlcdn.com/gen/47541f48e6bb4f9e863356312a0c17a1.png" -OutFile assets\android-icon-foreground.png
+Invoke-WebRequest "https://g.tlcdn.com/gen/2540121a1f344e16bb236933557902e5.png" -OutFile assets\icon.png
+Invoke-WebRequest "https://g.tlcdn.com/gen/2540121a1f344e16bb236933557902e5.png" -OutFile assets\splash-icon.png
+Invoke-WebRequest "https://g.tlcdn.com/gen/2540121a1f344e16bb236933557902e5.png" -OutFile assets\android-icon-foreground.png
 ```
-
-(Candidate #1: `3c57682c1e8f4604b7f208bd9c72e2c7.png` · Candidate #3:
-`d9f9708b3aac402aae28034ea6da949c.png` — swap the filename in all three
-lines.)
 
 Then commit the icon so it's saved:
 
