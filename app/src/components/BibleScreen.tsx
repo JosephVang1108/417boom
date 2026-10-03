@@ -139,7 +139,7 @@ export default function BibleScreen({ visible, onClose }: Props) {
         : `${book.name} ${chapter}:${nums[0]}–${nums[nums.length - 1]}`;
     try {
       const result = await Share.share({
-        message: `“${text}” — ${ref}\n\nShared from Abba 🙏`,
+        message: `“${text}” — ${ref}\n\nShared from Jireh 🙏`,
       });
       if (result.action === Share.sharedAction) {
         stats.bump('shares');

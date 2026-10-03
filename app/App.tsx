@@ -451,7 +451,7 @@ export default function App() {
           <View style={styles.header}>
             <View>
               <View style={styles.titleRow}>
-                <Text style={styles.title}>ABBA</Text>
+                <Text style={styles.title}>JIREH</Text>
                 {aiReady && <Text style={styles.aiBadge}>AI</Text>}
               </View>
               {streak > 1 && (

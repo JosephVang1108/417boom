@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Abba",
-    "slug": "abba",
+    "name": "Jireh",
+    "slug": "jireh",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,15 +20,15 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fourseventeenboom.abba",
+      "bundleIdentifier": "com.fourseventeenboom.jireh",
       "buildNumber": "1",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Abba listens when you speak to him — the microphone is used only while you talk, to hear your words.",
+        "NSMicrophoneUsageDescription": "Jireh listens when you speak to him — the microphone is used only while you talk, to hear your words.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.fourseventeenboom.abba",
+      "package": "com.fourseventeenboom.jireh",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#000000",

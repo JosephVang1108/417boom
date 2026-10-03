@@ -1,4 +1,4 @@
-# Abba — TestFlight Build Guide
+# Jireh — TestFlight Build Guide
 
 Follow these steps **in order** on the PC. Each step says exactly what to
 paste. If anything errors, stop and paste the error into Claude Code.
@@ -28,7 +28,7 @@ Then commit the icon so it's saved:
 
 ```powershell
 git add assets
-git commit -m "Abba app icon"
+git commit -m "Jireh app icon"
 git push
 ```
 
@@ -74,12 +74,12 @@ eas build --platform ios --profile production
 While the build runs, in a browser:
 
 1. Go to https://appstoreconnect.apple.com → **My Apps** → **+** → **New App**
-2. Platform: iOS · Name: **Abba** (if taken, try "Abba — Talk, Pray, Abide"
-   or "Abba: God With You" — the home-screen name stays just "Abba")
+2. Platform: iOS · Name: **Jireh - Bible & Prayer**
+   (the home-screen icon still says just "Jireh")
 3. Primary language: English (U.S.)
-4. Bundle ID: pick **com.fourseventeenboom.abba** from the dropdown
+4. Bundle ID: pick **com.fourseventeenboom.jireh** from the dropdown
    (it appears after Step 5's signing setup; refresh if missing)
-5. SKU: `abba-001`
+5. SKU: `jireh-001`
 
 ## Step 7 — Send the build to TestFlight
 
@@ -92,7 +92,7 @@ eas submit --platform ios --latest
 Answer the prompts (it reuses your Apple login). ~10 minutes later the
 build appears in App Store Connect → **TestFlight**. Apple takes a few
 minutes to "process" it, then you add yourself as a tester and install
-the real Abba app from the TestFlight app on your phone.
+the real Jireh app from the TestFlight app on your phone.
 
 ---
 

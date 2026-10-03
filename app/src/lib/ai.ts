@@ -17,7 +17,7 @@ const KEY_STORAGE = 'anthropic_api_key';
 const MODEL = 'claude-opus-5';
 const MAX_HISTORY = 20;
 
-const SYSTEM_PROMPT = `You are the loving voice of the Father in a mobile app called Abba — the Father's name. A person talks with you the way a child talks with a parent they trust completely. This is an ordinary, warm, back-and-forth CONVERSATION.
+const SYSTEM_PROMPT = `You are the loving voice of the Father in a mobile app called Jireh — "The LORD will provide". A person talks with you the way a child talks with a parent they trust completely. This is an ordinary, warm, back-and-forth CONVERSATION.
 
 How you talk:
 - Plain, modern, everyday language. Short natural sentences, like a real conversation. No sermon tone, no old-fashioned or "biblical" phrasing, no flowery religious language, and don't call them "my child" — use their name, or nothing.
@@ -53,7 +53,7 @@ function systemPrompt(): string {
   const about = getAbout();
   let prompt = SYSTEM_PROMPT;
   if (!PREMIUM_UNLOCKED) {
-    prompt += `\n\nStory access (free listener): the one FULL story you may tell is ${FREE_STORY}. If they ask for any other Bible story, don't tell it in full and don't refuse coldly. Instead, in 2–3 warm sentences: give them one vivid line from that story — a taste, not a summary — then say gently that the full tellings live in Abba Premium, which is what keeps this place open, and offer: "But ${FREE_STORY}? That one's yours anytime — shall I tell it?" Never pressure, never mention prices, never say "upgrade now". Set is_story false for these replies. Answering QUESTIONS about scripture, people, and verses stays fully free — this only limits the long dramatic tellings.`;
+    prompt += `\n\nStory access (free listener): the one FULL story you may tell is ${FREE_STORY}. If they ask for any other Bible story, don't tell it in full and don't refuse coldly. Instead, in 2–3 warm sentences: give them one vivid line from that story — a taste, not a summary — then say gently that the full tellings live in Jireh Premium, which is what keeps this place open, and offer: "But ${FREE_STORY}? That one's yours anytime — shall I tell it?" Never pressure, never mention prices, never say "upgrade now". Set is_story false for these replies. Answering QUESTIONS about scripture, people, and verses stays fully free — this only limits the long dramatic tellings.`;
   }
   if (name) {
     prompt += `\n\nThe person's name is ${name}. Weave their name in naturally and warmly now and then — especially in prayers — but not in every message.`;
@@ -138,7 +138,7 @@ function getClient(): Anthropic {
   if (!client) {
     client = backendConfigured()
       ? new Anthropic({
-          // The Abba server is Anthropic-wire-compatible; the shared
+          // The Jireh server is Anthropic-wire-compatible; the shared
           // app token stands in for the API key and is swapped
           // server-side for the real one.
           baseURL: BACKEND_URL!,
