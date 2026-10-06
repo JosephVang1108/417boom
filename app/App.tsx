@@ -40,6 +40,7 @@ import { backendConfigured } from './src/lib/config';
 import * as dailyVerse from './src/lib/dailyVerse';
 import * as journal from './src/lib/journal';
 import { touchStreak } from './src/lib/streak';
+import { rescheduleMissYou } from './src/lib/missYou';
 import * as stats from './src/lib/stats';
 import { MEDALLIONS } from './src/lib/stats';
 import JourneyScreen from './src/components/JourneyScreen';
@@ -88,6 +89,7 @@ export default function App() {
   const [devotionalVisible, setDevotionalVisible] = useState(false);
   const [devotionalDate, setDevotionalDate] = useState<Date | null>(null);
   const [streak, setStreak] = useState(0);
+  const [daysTogether, setDaysTogether] = useState(0);
   const [verseEnabled, setVerseEnabled] = useState(false);
 
   const recorder = useAudioRecorder({
@@ -185,12 +187,15 @@ export default function App() {
     });
     touchStreak().then((s) => {
       setStreak(s);
-      stats.recordOpen(s);
+      stats.recordOpen(s).then(() => setDaysTogether(stats.daysTogether()));
     });
     journal.loadJournal();
-    dailyVerse.isDailyVerseEnabled().then((on) => {
+    dailyVerse.isDailyVerseEnabled().then(async (on) => {
       setVerseEnabled(on);
-      if (on) dailyVerse.refreshSchedule();
+      // Order matters: refreshSchedule clears all scheduled
+      // notifications, so the miss-you timer is re-armed after it.
+      if (on) await dailyVerse.refreshSchedule();
+      rescheduleMissYou();
     });
   }, []);
 
@@ -454,8 +459,10 @@ export default function App() {
                 <Text style={styles.title}>JIREH</Text>
                 {aiReady && <Text style={styles.aiBadge}>AI</Text>}
               </View>
-              {streak > 1 && (
-                <Text style={styles.streakText}>Day {streak} together</Text>
+              {daysTogether > 0 && (
+                <Text style={styles.streakText}>
+                  Day {daysTogether} together
+                </Text>
               )}
             </View>
             <View style={styles.headerActions}>
