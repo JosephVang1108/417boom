@@ -467,7 +467,7 @@ export default function App() {
                 }}
                 hitSlop={8}
               >
-                <Medallion uri={MEDALLIONS.book} size={18} fallback="📖" />
+                <Medallion source={MEDALLIONS.book} size={18} fallback="📖" />
                 <Text style={styles.headerPillText}>Bible</Text>
               </Pressable>
               <Pressable
@@ -478,7 +478,7 @@ export default function App() {
                 }}
                 hitSlop={8}
               >
-                <Medallion uri={MEDALLIONS.dove} size={18} fallback="🕊️" />
+                <Medallion source={MEDALLIONS.dove} size={18} fallback="🕊️" />
                 <Text style={styles.headerPillText}>Journey</Text>
               </Pressable>
               <Pressable onPress={toggleVoice} hitSlop={14}>

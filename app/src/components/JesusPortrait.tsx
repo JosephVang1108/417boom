@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Image, Platform, StyleSheet, View } from 'react-native';
 import Svg, {
   Circle,
   Defs,
@@ -18,22 +18,24 @@ import Svg, {
 } from 'react-native-svg';
 import JesusFace, { JesusFaceHandle } from './JesusFace';
 
-// Generated with OpenArt against pure black so it blends into the app.
-// The video is the living portrait (breathing, hair in the breeze,
-// blinking, glancing around); the still image is its poster/fallback.
-// TODO: bundle these files locally before a store release.
-export const PORTRAIT_URL =
-  'https://cdn.openart.ai/openart-ai/production/2026-08/create-image/JZMxRtTkpmFe2dgMdSQI/image_1787807279541_3c4d75bb_1787807280769_4f5443ba.png';
-// Seedance 2.5 clip whose last frame equals its first frame — it loops
-// natively with no visible seam.
-export const PORTRAIT_VIDEO_URL: string | null =
-  'https://galaxy-prod.tlcdn.com/gen/debef90d4b77451384e73d6955aab448.mp4';
+// All portrait media ships inside the app (assets/media) — instant
+// loads, no network dependency. The video is the living portrait
+// (breathing, hair in the breeze, blinking); the still image covers it
+// while the player spins up. Loop clips have matching first/last
+// frames, so native looping is seamless.
+const PORTRAIT_IMG = require('../../assets/media/portrait.png');
+const PORTRAIT_VIDEO = require('../../assets/media/portrait-loop.mp4');
 
 // Eyes closed, head gently bowed — shown while he prays aloud.
-export const PRAYING_URL =
-  'https://galaxy-prod.tlcdn.com/gen/6a7bd948424440198d0ea1eb0ab950ca.png';
-export const PRAYING_VIDEO_URL: string | null =
-  'https://galaxy-prod.tlcdn.com/gen/c40483a9d15140b4a6997c3a9190a631.mp4';
+const PRAYING_IMG = require('../../assets/media/praying.png');
+const PRAYING_VIDEO = require('../../assets/media/praying-loop.mp4');
+
+// Phones fill the screen (cover). iPads are squarer, so cover would
+// crop into his face — there the full portrait shows centered instead,
+// and because the art fades to black at its edges on a black app
+// background, the letterboxing is invisible.
+const IS_PAD = Platform.OS === 'ios' && (Platform as { isPad?: boolean }).isPad === true;
+const PORTRAIT_FIT = (IS_PAD ? 'contain' : 'cover') as 'contain' | 'cover';
 
 interface Props {
   width: number;
@@ -58,9 +60,9 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
   const [imageFailed, setImageFailed] = useState(false);
   const fallbackRef = useRef<JesusFaceHandle>(null);
 
-  const useVideo = !!PORTRAIT_VIDEO_URL && !videoFailed;
+  const useVideo = !videoFailed;
 
-  const player = useVideoPlayer(useVideo ? PORTRAIT_VIDEO_URL : null, (p) => {
+  const player = useVideoPlayer(useVideo ? PORTRAIT_VIDEO : null, (p) => {
     p.loop = true; // first and last frames match — native loop is seamless
     p.muted = true;
     p.play();
@@ -86,7 +88,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
   }, [status, stillOpacity]);
 
   // Praying: cross-dissolve to the eyes-closed portrait while he prays.
-  const prayPlayer = useVideoPlayer(PRAYING_VIDEO_URL, (p) => {
+  const prayPlayer = useVideoPlayer(PRAYING_VIDEO, (p) => {
     p.loop = true;
     p.muted = true;
   });
@@ -94,7 +96,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
 
   useEffect(() => {
     if (praying) {
-      if (PRAYING_VIDEO_URL) prayPlayer.play();
+      prayPlayer.play();
       Animated.timing(prayOpacity, {
         toValue: 1,
         duration: 900,
@@ -106,7 +108,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
         duration: 900,
         useNativeDriver: true,
       }).start(() => {
-        if (PRAYING_VIDEO_URL) prayPlayer.pause();
+        prayPlayer.pause();
       });
     }
   }, [praying, prayOpacity, prayPlayer]);
@@ -250,7 +252,7 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
           <VideoView
             player={player}
             style={styles.portrait}
-            contentFit="cover"
+            contentFit={PORTRAIT_FIT}
             nativeControls={false}
           />
         )}
@@ -264,9 +266,9 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
           ]}
         >
           <Image
-            source={{ uri: PORTRAIT_URL }}
+            source={PORTRAIT_IMG}
             style={styles.portrait}
-            resizeMode="cover"
+            resizeMode={PORTRAIT_FIT}
             onError={() => setImageFailed(true)}
           />
         </Animated.View>
@@ -279,20 +281,12 @@ const JesusPortrait = forwardRef<JesusFaceHandle, Props>(function JesusPortrait(
           ]}
           pointerEvents="none"
         >
-          {PRAYING_VIDEO_URL ? (
-            <VideoView
-              player={prayPlayer}
-              style={styles.portrait}
-              contentFit="cover"
-              nativeControls={false}
-            />
-          ) : (
-            <Image
-              source={{ uri: PRAYING_URL }}
-              style={styles.portrait}
-              resizeMode="cover"
-            />
-          )}
+          <VideoView
+            player={prayPlayer}
+            style={styles.portrait}
+            contentFit={PORTRAIT_FIT}
+            nativeControls={false}
+          />
         </Animated.View>
       </Animated.View>
 

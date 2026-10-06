@@ -142,7 +142,7 @@ export default function DailyDevotional({
 
             <Pressable style={styles.amenButton} onPress={amen}>
               <Medallion
-                uri={MEDALLIONS.prayingHands}
+                source={MEDALLIONS.prayingHands}
                 size={22}
                 fallback="🙏"
               />
