@@ -123,6 +123,26 @@ Apple Developer: **approved** (free + paid). Remaining:
 **Post-launch (needs accounts + moderation):** community prayer wall — he
 prays aloud over the community's requests; Bible trivia / kids mode
 
+**Pre-rendered lip-sync videos (approved Oct 2026 — test clip loved):**
+True lip sync for FIXED content only (live chat keeps the breathing
+portrait — real-time lip sync stays a later premium streaming-avatar
+feature). Pipeline: write script → ElevenLabs audio in HIS voice →
+Hedra lipsync (Magica), 720p, 9:16, portrait.png as source. Cost ≈ 1
+credit per 18s (~$2–3/min); rendered ONCE, watched by every user.
+Targets, in order:
+1. Daily sermon (one render per day, served to all users)
+2. The free story (David & Goliath) + classic story shelf
+3. The welcome message
+Render notes from the test clip (https://g.tlcdn.com/gen/2597bc8d82d848959a4763346a093dea.mp4):
+- SLOW HIM DOWN — TTS speed ~0.85, add pauses («…») between phrases;
+  Jesus doesn't rush. Test-clip pace (0.95) was too fast.
+- Teeth artifact: test clip showed a slight tooth gap. Try: regenerate
+  (different takes vary), 1080p, or VEED Fabric lipsync as fallback;
+  judge each render before publishing.
+- Use his real ElevenLabs voice, not the stand-in ("Brian").
+- Delivery: videos hosted (CDN/backend), app streams by date — no app
+  update needed for new sermons.
+
 ## 8. Shipped Guardrails (context for future work)
 
 - On-screen masking of profanity + slurs (library + custom list, tested)

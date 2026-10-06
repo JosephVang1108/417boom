@@ -35,7 +35,7 @@ import {
   resetConversation,
   setApiKey,
 } from './src/lib/ai';
-import { cleanForDisplay, hasSlur } from './src/lib/clean';
+import { cleanForDisplay, hasProfanity, hasSlur } from './src/lib/clean';
 import { backendConfigured } from './src/lib/config';
 import * as dailyVerse from './src/lib/dailyVerse';
 import * as journal from './src/lib/journal';
@@ -91,6 +91,7 @@ export default function App() {
   const [streak, setStreak] = useState(0);
   const [daysTogether, setDaysTogether] = useState(0);
   const [verseEnabled, setVerseEnabled] = useState(false);
+  const [eveningEnabled, setEveningEnabled] = useState(false);
 
   const recorder = useAudioRecorder({
     ...RecordingPresets.HIGH_QUALITY,
@@ -126,9 +127,9 @@ export default function App() {
     lastActivity.current = Date.now();
   };
 
-  // Repeated slurs: after the third strike he stops and prays over
-  // them — a long prayer about the hate and for peace — then the
-  // count starts fresh.
+  // Repeated profanity or slurs: after the third strike he stops and
+  // prays over them — a long prayer about the hate and for peace —
+  // then the count starts fresh.
   const hateStrikes = useRef(0);
 
   const hatePrayerFallback = (): GuideResponse => {
@@ -192,9 +193,11 @@ export default function App() {
     journal.loadJournal();
     dailyVerse.isDailyVerseEnabled().then(async (on) => {
       setVerseEnabled(on);
+      const eve = await dailyVerse.isEveningEnabled();
+      setEveningEnabled(eve);
       // Order matters: refreshSchedule clears all scheduled
       // notifications, so the miss-you timer is re-armed after it.
-      if (on) await dailyVerse.refreshSchedule();
+      if (on || eve) await dailyVerse.refreshSchedule();
       rescheduleMissYou();
     });
   }, []);
@@ -388,8 +391,9 @@ export default function App() {
     setInput('');
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
 
-    // Slur strikes: the third one triggers the prayer intervention.
-    if (hasSlur(question)) hateStrikes.current += 1;
+    // Strikes: slurs and plain profanity both count — the third one
+    // triggers the prayer intervention.
+    if (hasSlur(question) || hasProfanity(question)) hateStrikes.current += 1;
     const needHatePrayer = hateStrikes.current >= 3;
 
     // Prefer Claude when a key is set; fall back to the offline verse engine.
@@ -623,14 +627,28 @@ export default function App() {
             }}
             backendMode={backendConfigured()}
             verseEnabled={verseEnabled}
+            eveningEnabled={eveningEnabled}
             journal={journal.getJournal()}
             onToggleVerse={(enabled) => {
               dailyVerse.setDailyVerseEnabled(enabled).then((ok) => {
                 setVerseEnabled(enabled && ok);
+                rescheduleMissYou(); // re-arm: the reschedule wiped it
                 if (enabled && !ok) {
                   Alert.alert(
                     'Notifications needed',
                     'Allow notifications in your phone settings to receive the daily verse.'
+                  );
+                }
+              });
+            }}
+            onToggleEvening={(enabled) => {
+              dailyVerse.setEveningEnabled(enabled).then((ok) => {
+                setEveningEnabled(enabled && ok);
+                rescheduleMissYou(); // re-arm: the reschedule wiped it
+                if (enabled && !ok) {
+                  Alert.alert(
+                    'Notifications needed',
+                    'Allow notifications in your phone settings to receive the goodnight nudge.'
                   );
                 }
               });

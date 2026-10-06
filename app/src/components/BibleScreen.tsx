@@ -276,20 +276,39 @@ export default function BibleScreen({ visible, onClose }: Props) {
     }
   };
 
+  // Each book is a worn leather spine; a group reads as a stack of
+  // old bibles resting on each other, every volume jutting a little.
   const bookGroup = (title: string, books: BibleBook[]) => (
     <View key={title}>
       <Text style={styles.groupLabel}>{title.toUpperCase()}</Text>
-      <View style={styles.groupCard}>
-        {books.map((b, i) => (
-          <Pressable
-            key={b.name}
-            style={[styles.bookRow, i < books.length - 1 && styles.bookRowLine]}
-            onPress={() => setBook(b)}
-          >
-            <Text style={styles.bookName}>{b.name}</Text>
-            <Text style={styles.bookChapters}>{b.chapters}</Text>
-          </Pressable>
-        ))}
+      <View style={styles.stack}>
+        {books.map((b, i) => {
+          const leather = LEATHERS[(b.name.length + i) % LEATHERS.length];
+          const inset = SPINE_INSETS[i % SPINE_INSETS.length];
+          return (
+            <Pressable
+              key={b.name}
+              style={[
+                styles.spine,
+                {
+                  backgroundColor: leather.bg,
+                  borderColor: leather.edge,
+                  marginHorizontal: inset,
+                },
+              ]}
+              onPress={() => setBook(b)}
+            >
+              <View style={styles.spineTooling} />
+              <View style={styles.spineRow}>
+                <Text style={styles.spineName} numberOfLines={1}>
+                  {b.name}
+                </Text>
+                <Text style={styles.spineChapters}>{b.chapters}</Text>
+              </View>
+              <View style={styles.spineTooling} />
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
@@ -512,6 +531,18 @@ const INK_SOFT = '#8A7A5C';
 const GOLD = '#8B6B2E';
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' });
 
+// Old-leather bindings for the book spines, with gold-tooled titles.
+const LEATHERS = [
+  { bg: '#4A2E1E', edge: '#6B4428' }, // dark brown
+  { bg: '#5C2B23', edge: '#7E3D32' }, // oxblood
+  { bg: '#3E3A2A', edge: '#5A543C' }, // faded olive
+  { bg: '#54391F', edge: '#76522E' }, // chestnut
+  { bg: '#2F3140', edge: '#474A5E' }, // midnight
+  { bg: '#46281F', edge: '#64392C' }, // mahogany
+];
+// How far each volume juts in or out of the stack.
+const SPINE_INSETS = [6, 0, 10, 3, 12, 1, 8, 4];
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -546,13 +577,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     marginTop: 12,
-    marginBottom: 12,
+    marginBottom: 14,
     fontFamily: SERIF,
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    justifyContent: 'center',
   },
   continueCard: {
     flexDirection: 'row',
@@ -643,32 +677,45 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 8,
   },
-  groupCard: {
-    backgroundColor: CARD,
-    borderRadius: 16,
+  stack: {
+    paddingBottom: 6,
+  },
+  spine: {
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: EDGE,
-    overflow: 'hidden',
+    marginBottom: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    shadowColor: '#2A1C0E',
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
-  bookRow: {
-    flexDirection: 'row',
+  spineTooling: {
+    height: 1,
+    backgroundColor: 'rgba(233,217,166,0.3)',
+    marginHorizontal: 2,
+  },
+  spineRow: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    justifyContent: 'center',
+    paddingVertical: 8,
   },
-  bookRowLine: {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(217,199,161,0.5)',
-  },
-  bookName: {
-    color: INK,
+  spineName: {
+    color: '#E9D9A6',
     fontSize: 16,
     fontFamily: SERIF,
+    fontWeight: '600',
+    letterSpacing: 1.6,
+    textAlign: 'center',
+    maxWidth: '82%',
   },
-  bookChapters: {
-    color: INK_SOFT,
-    fontSize: 13,
+  spineChapters: {
+    position: 'absolute',
+    right: 4,
+    color: 'rgba(233,217,166,0.5)',
+    fontSize: 11,
   },
   chapterHead: {
     alignItems: 'center',

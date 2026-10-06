@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
 const ENABLED_KEY = 'daily_verse_enabled';
+const EVENING_KEY = 'evening_nudge_enabled';
 const DEVOTIONAL_DAY_KEY = 'devotional_last_day';
 const HOUR = 8; // 8:00 AM local
 const EVENING_HOUR = 21; // 9:00 PM local
@@ -111,12 +112,36 @@ export async function setDailyVerseEnabled(enabled: boolean): Promise<boolean> {
     if (enabled) {
       const perm = await Notifications.requestPermissionsAsync();
       if (!perm.granted) return false;
-      await AsyncStorage.setItem(ENABLED_KEY, 'yes');
-      await refreshSchedule();
-      return true;
     }
-    await AsyncStorage.setItem(ENABLED_KEY, 'no');
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await AsyncStorage.setItem(ENABLED_KEY, enabled ? 'yes' : 'no');
+    await refreshSchedule();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The 9PM "before you sleep" nudge — its own switch. Unset, it
+ * follows the morning switch, which is how it behaved before. */
+export async function isEveningEnabled(): Promise<boolean> {
+  try {
+    const v = await AsyncStorage.getItem(EVENING_KEY);
+    if (v === 'yes') return true;
+    if (v === 'no') return false;
+    return await isDailyVerseEnabled();
+  } catch {
+    return false;
+  }
+}
+
+export async function setEveningEnabled(enabled: boolean): Promise<boolean> {
+  try {
+    if (enabled) {
+      const perm = await Notifications.requestPermissionsAsync();
+      if (!perm.granted) return false;
+    }
+    await AsyncStorage.setItem(EVENING_KEY, enabled ? 'yes' : 'no');
+    await refreshSchedule();
     return true;
   } catch {
     return false;
@@ -129,15 +154,17 @@ export async function setDailyVerseEnabled(enabled: boolean): Promise<boolean> {
  */
 export async function refreshSchedule(): Promise<void> {
   try {
-    if (!(await isDailyVerseEnabled())) return;
+    const morning = await isDailyVerseEnabled();
+    const evening = await isEveningEnabled();
     await Notifications.cancelAllScheduledNotificationsAsync();
+    if (!morning && !evening) return;
     const now = new Date();
     for (let i = 0; i < 7; i++) {
       // Morning: the day's verse (matches the in-app devotional).
       const fireAt = new Date(now);
       fireAt.setDate(now.getDate() + i);
       fireAt.setHours(HOUR, 0, 0, 0);
-      if (fireAt > now) {
+      if (morning && fireAt > now) {
         const verse =
           DAILY_VERSES[(fireAt.getDate() + fireAt.getMonth()) % DAILY_VERSES.length];
         await Notifications.scheduleNotificationAsync({
@@ -155,7 +182,7 @@ export async function refreshSchedule(): Promise<void> {
       const eveAt = new Date(now);
       eveAt.setDate(now.getDate() + i);
       eveAt.setHours(EVENING_HOUR, 0, 0, 0);
-      if (eveAt > now) {
+      if (evening && eveAt > now) {
         await Notifications.scheduleNotificationAsync({
           content: {
             title: 'Before you sleep',
