@@ -3,10 +3,29 @@ import * as SecureStore from 'expo-secure-store';
 const NAME_STORAGE = 'user_first_name';
 const ABOUT_STORAGE = 'user_about';
 const ONBOARDED_STORAGE = 'onboarded_v1';
+const MODE_STORAGE = 'listener_mode';
+
+/** Who's listening: how he speaks adapts — simpler, gentler, always
+ * kid-safe when a child is on the other side. */
+export type ListenerMode = 'adult' | 'kids';
 
 let userName: string | null = null;
 let aboutMe: string | null = null;
 let onboarded = false;
+let listenerMode: ListenerMode = 'adult';
+
+export function getMode(): ListenerMode {
+  return listenerMode;
+}
+
+export async function setMode(mode: ListenerMode): Promise<void> {
+  listenerMode = mode;
+  try {
+    await SecureStore.setItemAsync(MODE_STORAGE, mode);
+  } catch {
+    // Storage unavailable — mode still applies this session.
+  }
+}
 
 export async function loadName(): Promise<string | null> {
   try {
@@ -43,6 +62,10 @@ export async function loadProfile(): Promise<{
   try {
     aboutMe = await SecureStore.getItemAsync(ABOUT_STORAGE);
     onboarded = (await SecureStore.getItemAsync(ONBOARDED_STORAGE)) === 'yes';
+    listenerMode =
+      (await SecureStore.getItemAsync(MODE_STORAGE)) === 'kids'
+        ? 'kids'
+        : 'adult';
   } catch {
     aboutMe = null;
     onboarded = false;

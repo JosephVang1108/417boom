@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { DISCLOSURE_TEXT } from '../lib/disclosure';
 import { PrayerEntry } from '../lib/journal';
+import * as profile from '../lib/profile';
 
 interface Props {
   visible: boolean;
@@ -55,13 +56,20 @@ export default function SettingsModal({
   const [voiceDraft, setVoiceDraft] = useState('');
   const [nameDraft, setNameDraft] = useState(userName);
   const [voiceIdDraft, setVoiceIdDraft] = useState(voiceId);
+  const [mode, setModeState] = useState<profile.ListenerMode>('adult');
 
   useEffect(() => {
     if (visible) {
       setNameDraft(userName);
       setVoiceIdDraft(voiceId);
+      setModeState(profile.getMode());
     }
   }, [visible, userName, voiceId]);
+
+  const pickMode = (m: profile.ListenerMode) => {
+    setModeState(m);
+    profile.setMode(m); // takes effect on his very next reply
+  };
 
   const save = () => {
     if (nameDraft.trim() !== userName) {
@@ -87,6 +95,40 @@ export default function SettingsModal({
         <View style={styles.card}>
           <ScrollView>
             <Text style={styles.title}>Settings</Text>
+
+            <Text style={styles.section}>Who's listening?</Text>
+            <Text style={styles.body}>
+              In Kids mode he speaks simply and gently — stories, sermons,
+              and answers all made safe and cozy for little ears.
+            </Text>
+            <View style={styles.modeRow}>
+              <Pressable
+                style={[styles.modeChip, mode === 'adult' && styles.modeChipOn]}
+                onPress={() => pickMode('adult')}
+              >
+                <Text
+                  style={[
+                    styles.modeChipText,
+                    mode === 'adult' && styles.modeChipTextOn,
+                  ]}
+                >
+                  Adult
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modeChip, mode === 'kids' && styles.modeChipOn]}
+                onPress={() => pickMode('kids')}
+              >
+                <Text
+                  style={[
+                    styles.modeChipText,
+                    mode === 'kids' && styles.modeChipTextOn,
+                  ]}
+                >
+                  Kids
+                </Text>
+              </Pressable>
+            </View>
 
             <Text style={styles.section}>Your name</Text>
             <Text style={styles.body}>
@@ -316,6 +358,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 6,
     textDecorationLine: 'underline',
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 6,
+  },
+  modeChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  modeChipOn: {
+    backgroundColor: 'rgba(185, 150, 78, 0.9)',
+    borderColor: 'rgba(185, 150, 78, 0.9)',
+  },
+  modeChipText: {
+    color: '#C9C9C2',
+    fontSize: 15,
+  },
+  modeChipTextOn: {
+    color: '#0A0A0A',
+    fontWeight: '700',
   },
   disclosureText: {
     color: "#9A9A90",
