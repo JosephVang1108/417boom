@@ -686,6 +686,11 @@ export default function App() {
               setJourneyOpen(false);
               send(`Tell me the story of ${ask}.`);
             }}
+            onSermon={() => {
+              markActive();
+              setJourneyOpen(false);
+              send("Preach today's sermon to me.");
+            }}
           />
 
           <BibleScreen

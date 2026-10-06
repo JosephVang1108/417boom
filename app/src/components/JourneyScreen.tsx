@@ -29,6 +29,7 @@ interface Props {
   onOpenBible: () => void;
   onOpenDevotional: (date?: Date) => void;
   onTellStory: (ask: string) => void;
+  onSermon: () => void;
 }
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' });
@@ -66,6 +67,7 @@ export default function JourneyScreen({
   onOpenBible,
   onOpenDevotional,
   onTellStory,
+  onSermon,
 }: Props) {
   const [stats, setStats] = useState<JourneyStats>(getStats());
   const [badgesOpen, setBadgesOpen] = useState(false);
@@ -183,6 +185,22 @@ export default function JourneyScreen({
               <Text style={styles.wordButtonText}>Today's Word</Text>
               <Text style={styles.wordButtonSub}>
                 The day's verse, and what it means
+              </Text>
+            </View>
+            <Text style={styles.rowArrowDark}>›</Text>
+          </Pressable>
+
+          {/* He preaches — one full sermon a day, free */}
+          <Pressable style={styles.wordButton} onPress={onSermon}>
+            <Medallion
+              source={require('../../assets/media/m-scripture-seeker.jpg')}
+              size={26}
+              fallback="📜"
+            />
+            <View style={styles.bibleButtonBody}>
+              <Text style={styles.wordButtonText}>Today's Sermon</Text>
+              <Text style={styles.wordButtonSub}>
+                He preaches on the day's theme — free, every day
               </Text>
             </View>
             <Text style={styles.rowArrowDark}>›</Text>
