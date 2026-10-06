@@ -128,8 +128,8 @@ export function getBadges(s: JourneyStats): Badge[] {
     b('faithful-month', '⭐', require('../../assets/media/m-faithful-month.jpg'), 'Faithful Month', 'A 30-day streak together', s.bestStreak >= 30),
     b('hundredfold', '👑', require('../../assets/media/m-hundredfold.jpg'), 'Hundredfold', 'A 100-day streak together', s.bestStreak >= 100),
     // Faithfulness: perfect weeks — all seven days, week after week.
-    b('four-weeks-faithful', '🌾', 'https://g.tlcdn.com/gen/13b84e0b9f6b4b05a72572920e43f2ca.jpg', 'Four Weeks Faithful', '4 perfect weeks — every single day', s.perfectWeeks >= 4),
-    b('season-faithful', '🍇', 'https://g.tlcdn.com/gen/0ed9637d9fcc42e39c6b8821de542d40.jpg', 'A Season of Faithfulness', '12 perfect weeks of showing up', s.perfectWeeks >= 12),
+    b('four-weeks-faithful', '🌾', require('../../assets/media/m-faithful-weeks.jpg'), 'Four Weeks Faithful', '4 perfect weeks — every single day', s.perfectWeeks >= 4),
+    b('season-faithful', '🍇', require('../../assets/media/m-season-faithful.jpg'), 'A Season of Faithfulness', '12 perfect weeks of showing up', s.perfectWeeks >= 12),
     b('first-prayer', '🙏', MEDALLIONS.prayingHands, 'First Prayer', 'Prayed together for the first time', s.prayers >= 1),
     b('prayer-warrior', '🛡️', require('../../assets/media/m-prayer-warrior.jpg'), 'Prayer Warrior', '25 prayers lifted up', s.prayers >= 25),
     b('intercessor', '❤️', require('../../assets/media/m-intercessor.jpg'), 'Intercessor', '100 prayers lifted up', s.prayers >= 100),
