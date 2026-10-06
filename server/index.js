@@ -90,16 +90,29 @@ app.get('/tts', async (req, res) => {
       model === 'eleven_v3'
         ? text
         : text.replace(/\[[^\]]*\]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    // Always maximum-consistency settings. Low stability lets the
+    // expressive engines drift the ACCENT mid-passage (he slid into
+    // British a few minutes into stories) — never again. Robust on v3,
+    // high stability + zero style on v2.
     const voice_settings =
       model === 'eleven_v3'
-        ? { stability: story ? 0.5 : 1.0, use_speaker_boost: true }
+        ? { stability: 1.0, use_speaker_boost: true }
         : {
-            stability: story ? 0.45 : 0.65,
-            similarity_boost: 0.85,
-            style: story ? 0.35 : 0.1,
+            stability: 0.75,
+            similarity_boost: 0.9,
+            style: 0.0,
             use_speaker_boost: true,
-            speed: story ? 1.05 : 0.95,
+            speed: story ? 1.0 : 0.95,
           };
+    // Turbo supports pinning the language — do it so long Bible
+    // passages can't wander either.
+    const body = {
+      text: speakable,
+      model_id: model,
+      voice_settings,
+      seed: 42,
+    };
+    if (model === 'eleven_turbo_v2_5') body.language_code = 'en';
     return fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=mp3_44100_128`,
       {
@@ -108,12 +121,7 @@ app.get('/tts', async (req, res) => {
           'xi-api-key': ELEVENLABS_API_KEY,
           'content-type': 'application/json',
         },
-        body: JSON.stringify({
-          text: speakable,
-          model_id: model,
-          voice_settings,
-          seed: 42,
-        }),
+        body: JSON.stringify(body),
       }
     );
   };

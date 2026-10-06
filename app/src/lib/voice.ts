@@ -167,17 +167,17 @@ export async function synthesize(
       const voice_settings =
         model === 'eleven_v3'
           ? {
-              // Stories get the Natural (expressive) setting for lively
-              // telling; conversation stays on Robust for consistency.
-              stability: options.story ? 0.5 : 1.0,
+              // Robust always: lower stability lets the expressive
+              // engine drift the accent mid-passage (British slip).
+              stability: 1.0,
               use_speaker_boost: true,
             }
           : {
-              stability: options.story ? 0.45 : 0.65,
-              similarity_boost: 0.85,
-              style: options.story ? 0.35 : 0.1,
+              stability: 0.75,
+              similarity_boost: 0.9,
+              style: 0.0,
               use_speaker_boost: true,
-              speed: options.story ? 1.05 : 0.95,
+              speed: options.story ? 1.0 : 0.95,
             };
       return fetch(
         `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
