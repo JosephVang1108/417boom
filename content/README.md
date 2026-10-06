@@ -31,6 +31,15 @@ hosted (CDN/backend) and the app streams them.
 4. **Quality gate** — watch the whole render before publishing. Watch
    for: teeth artifacts (test clip had a slight gap — regenerate if a
    take is off), drift from his face, robotic pacing.
+   **IDENTITY DRIFT (confirmed Oct 2026):** the first full 5:25
+   Infinitalk render drifted — eyes grew larger and pupils darkened
+   starting ~2:00, worsening gradually. Long one-shot renders forget
+   the source face. Always scrub to 2:00 and 4:00 and compare against
+   0:00 before approving. Mitigations, in order: Hedra (stronger
+   identity lock; slower, ~4h for 5+ min), or chunked rendering —
+   split audio at paragraph pauses into ~110s pieces, render each
+   fresh from portrait.png (drift resets per chunk), stitch with
+   merge_videos.
 5. **Publish** — upload to hosting; app streams by content id. New
    content never requires an app update.
 
