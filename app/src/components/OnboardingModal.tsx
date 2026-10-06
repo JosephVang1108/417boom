@@ -10,6 +10,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import {
+  DISCLOSURE_TEXT,
+  DISCLOSURE_TITLE,
+  recordDisclosureAccepted,
+} from '../lib/disclosure';
 
 interface Props {
   visible: boolean;
@@ -97,8 +102,24 @@ export default function OnboardingModal({ visible, onComplete }: Props) {
                 and I will give you rest.”
               </Text>
               <Text style={styles.verseRef}>— Matthew 11:28</Text>
-              <Pressable style={styles.button} onPress={() => setStep(1)}>
+              <Pressable style={styles.button} onPress={() => setStep(10)}>
                 <Text style={styles.buttonText}>Come</Text>
+              </Pressable>
+            </>
+          )}
+
+          {step === 10 && (
+            <>
+              <Text style={styles.heading}>{DISCLOSURE_TITLE}</Text>
+              <Text style={styles.disclosure}>{DISCLOSURE_TEXT}</Text>
+              <Pressable
+                style={styles.button}
+                onPress={() => {
+                  recordDisclosureAccepted();
+                  setStep(1);
+                }}
+              >
+                <Text style={styles.buttonText}>I understand — continue</Text>
               </Pressable>
             </>
           )}
@@ -227,6 +248,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
     marginBottom: 16,
+  },
+  disclosure: {
+    color: '#C9C9C2',
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 24,
   },
   input: {
     backgroundColor: 'rgba(255,255,255,0.07)',

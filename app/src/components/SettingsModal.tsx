@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { DISCLOSURE_TEXT } from '../lib/disclosure';
 import { PrayerEntry } from '../lib/journal';
 
 interface Props {
@@ -217,6 +218,9 @@ export default function SettingsModal({
               </>
             )}
 
+            <Text style={styles.section}>About Jireh</Text>
+            <Text style={styles.disclosureText}>{DISCLOSURE_TEXT}</Text>
+
             <Text style={styles.note}>
               Everything here is stored on this device only.
             </Text>
@@ -312,6 +316,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 6,
     textDecorationLine: 'underline',
+  },
+  disclosureText: {
+    color: "#9A9A90",
+    fontSize: 12,
+    lineHeight: 19,
+    marginBottom: 18,
   },
   note: {
     color: '#7A7A72',
