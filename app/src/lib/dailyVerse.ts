@@ -4,6 +4,18 @@ import * as Notifications from 'expo-notifications';
 const ENABLED_KEY = 'daily_verse_enabled';
 const DEVOTIONAL_DAY_KEY = 'devotional_last_day';
 const HOUR = 8; // 8:00 AM local
+const EVENING_HOUR = 21; // 9:00 PM local
+
+// Soft evening lines — a nightly invitation to close the day with him.
+const EVENING_LINES = [
+  'Before you sleep, tell him about today — the good and the heavy. He’s listening.',
+  'The day is done. Lay it down with him for a minute before you rest.',
+  'One quiet prayer before bed. He’d love to hear your voice tonight.',
+  'How did today treat you? Come tell him — then rest easy.',
+  'End the day the way it began: not alone. 🕊️',
+  'A bedtime story, a verse, or just a goodnight — he’s here.',
+  'Let him carry tonight what you carried all day.',
+];
 
 export interface DailyVerse {
   ref: string;
@@ -121,22 +133,40 @@ export async function refreshSchedule(): Promise<void> {
     await Notifications.cancelAllScheduledNotificationsAsync();
     const now = new Date();
     for (let i = 0; i < 7; i++) {
+      // Morning: the day's verse (matches the in-app devotional).
       const fireAt = new Date(now);
       fireAt.setDate(now.getDate() + i);
       fireAt.setHours(HOUR, 0, 0, 0);
-      if (fireAt <= now) continue; // today's 8am already passed
-      const verse =
-        DAILY_VERSES[(fireAt.getDate() + fireAt.getMonth()) % DAILY_VERSES.length];
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: verse.ref,
-          body: `“${verse.text}”`,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: fireAt,
-        },
-      });
+      if (fireAt > now) {
+        const verse =
+          DAILY_VERSES[(fireAt.getDate() + fireAt.getMonth()) % DAILY_VERSES.length];
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: verse.ref,
+            body: `“${verse.text}”`,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: fireAt,
+          },
+        });
+      }
+      // Evening: a soft invitation to close the day with him.
+      const eveAt = new Date(now);
+      eveAt.setDate(now.getDate() + i);
+      eveAt.setHours(EVENING_HOUR, 0, 0, 0);
+      if (eveAt > now) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'Before you sleep',
+            body: EVENING_LINES[eveAt.getDate() % EVENING_LINES.length],
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: eveAt,
+          },
+        });
+      }
     }
   } catch {
     // notifications unavailable — fail quietly

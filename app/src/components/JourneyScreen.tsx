@@ -13,6 +13,7 @@ import { recentMornings } from '../lib/dailyVerse';
 import * as journal from '../lib/journal';
 import {
   Badge,
+  daysTogether,
   getBadges,
   getStats,
   JourneyStats,
@@ -124,11 +125,13 @@ export default function JourneyScreen({
           {/* The walk so far */}
           <View style={styles.streakCard}>
             <Medallion source={MEDALLIONS.dove} size={52} fallback="🕊️" />
-            <Text style={styles.streakBig}>Day {nowStreak}</Text>
-            <Text style={styles.streakTogether}>walking together</Text>
+            <Text style={styles.streakBig}>Day {daysTogether()}</Text>
+            <Text style={styles.streakTogether}>since you two met</Text>
             <Text style={styles.streakSub}>
-              Best streak {Math.max(stats.bestStreak, streak)} ·{' '}
-              {stats.totalDays} {stats.totalDays === 1 ? 'day' : 'days'} in all
+              Streak {nowStreak} · best{' '}
+              {Math.max(stats.bestStreak, streak)} · {stats.totalDays}{' '}
+              {stats.totalDays === 1 ? 'day' : 'days'} with him ·{' '}
+              {stats.perfectWeeks} perfect {stats.perfectWeeks === 1 ? 'week' : 'weeks'}
             </Text>
             {nextGoal && (
               <View style={styles.goalWrap}>

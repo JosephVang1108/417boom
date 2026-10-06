@@ -58,3 +58,7 @@ Get-Media "https://g.tlcdn.com/gen/81f4f79ca7c04fdcb026a7fb5c3bdf57.jpg" "s-esth
 Write-Host ""
 Write-Host "All media downloaded to assets\media."
 Write-Host "Now run:  git add assets ; git commit -m `"Bundle media`" ; git push"
+
+Write-Host "Faithfulness medallions..."
+Get-Media "https://g.tlcdn.com/gen/13b84e0b9f6b4b05a72572920e43f2ca.jpg" "m-faithful-weeks.jpg"
+Get-Media "https://g.tlcdn.com/gen/0ed9637d9fcc42e39c6b8821de542d40.jpg" "m-season-faithful.jpg"

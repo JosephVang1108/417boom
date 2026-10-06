@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Image, ImageStyle, StyleProp, Text } from 'react-native';
 
 interface Props {
-  /** Bundled medallion artwork (a require()d asset). */
-  source: number;
+  /** Bundled medallion artwork (require()d), or a remote URL for
+   * newly added medallions awaiting their next bundling pass. */
+  source: number | string;
   size: number;
   /** Emoji shown only if the artwork fails to render. */
   fallback: string;
@@ -22,7 +23,7 @@ export default function Medallion({ source, size, fallback, style }: Props) {
   }
   return (
     <Image
-      source={source}
+      source={typeof source === 'string' ? { uri: source } : source}
       onError={() => setFailed(true)}
       style={[
         { width: size, height: size, borderRadius: size / 2 },

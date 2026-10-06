@@ -15,6 +15,11 @@ export interface JourneyStats {
   stories: number;
   shares: number;
   lastDay: string | null;
+  /** The calendar day they first met (ISO) — "Day N together" counts
+   * from here and never resets, even when days are missed. */
+  firstDay: string | null;
+  /** Completed 7-day runs of daily use — the faithfulness track. */
+  perfectWeeks: number;
 }
 
 const EMPTY: JourneyStats = {
@@ -25,6 +30,8 @@ const EMPTY: JourneyStats = {
   stories: 0,
   shares: 0,
   lastDay: null,
+  firstDay: null,
+  perfectWeeks: 0,
 };
 
 let cache: JourneyStats = { ...EMPTY };
@@ -51,12 +58,26 @@ function save(): void {
 export async function recordOpen(currentStreak: number): Promise<void> {
   await loadStats();
   const today = new Date().toDateString();
+  if (!cache.firstDay) cache.firstDay = today;
   if (cache.lastDay !== today) {
     cache.totalDays += 1;
     cache.lastDay = today;
+    // Every unbroken run of 7 days completes another perfect week.
+    if (currentStreak > 0 && currentStreak % 7 === 0) {
+      cache.perfectWeeks += 1;
+    }
   }
   if (currentStreak > cache.bestStreak) cache.bestStreak = currentStreak;
   save();
+}
+
+/** Calendar days since they first met, inclusive — Monday's first
+ * visit makes Wednesday "Day 3" even if Tuesday was missed. */
+export function daysTogether(): number {
+  if (!cache.firstDay) return 1;
+  const first = new Date(cache.firstDay);
+  const ms = Date.now() - first.getTime();
+  return Math.max(1, Math.floor(ms / 86_400_000) + 1);
 }
 
 export async function bump(
@@ -74,8 +95,9 @@ export function getStats(): JourneyStats {
 export interface Badge {
   id: string;
   emoji: string;
-  /** Hand-painted medallion artwork, bundled with the app. */
-  icon: number;
+  /** Hand-painted medallion artwork — bundled, or a URL until the
+   * next media-bundling pass. */
+  icon: number | string;
   name: string;
   desc: string;
   earned: boolean;
@@ -94,7 +116,7 @@ export function getBadges(s: JourneyStats): Badge[] {
   const b = (
     id: string,
     emoji: string,
-    icon: number,
+    icon: number | string,
     name: string,
     desc: string,
     earned: boolean
@@ -105,6 +127,9 @@ export function getBadges(s: JourneyStats): Badge[] {
     b('week-grace', '🌿', require('../../assets/media/m-week-grace.jpg'), 'Week of Grace', 'A 7-day streak together', s.bestStreak >= 7),
     b('faithful-month', '⭐', require('../../assets/media/m-faithful-month.jpg'), 'Faithful Month', 'A 30-day streak together', s.bestStreak >= 30),
     b('hundredfold', '👑', require('../../assets/media/m-hundredfold.jpg'), 'Hundredfold', 'A 100-day streak together', s.bestStreak >= 100),
+    // Faithfulness: perfect weeks — all seven days, week after week.
+    b('four-weeks-faithful', '🌾', 'https://g.tlcdn.com/gen/13b84e0b9f6b4b05a72572920e43f2ca.jpg', 'Four Weeks Faithful', '4 perfect weeks — every single day', s.perfectWeeks >= 4),
+    b('season-faithful', '🍇', 'https://g.tlcdn.com/gen/0ed9637d9fcc42e39c6b8821de542d40.jpg', 'A Season of Faithfulness', '12 perfect weeks of showing up', s.perfectWeeks >= 12),
     b('first-prayer', '🙏', MEDALLIONS.prayingHands, 'First Prayer', 'Prayed together for the first time', s.prayers >= 1),
     b('prayer-warrior', '🛡️', require('../../assets/media/m-prayer-warrior.jpg'), 'Prayer Warrior', '25 prayers lifted up', s.prayers >= 25),
     b('intercessor', '❤️', require('../../assets/media/m-intercessor.jpg'), 'Intercessor', '100 prayers lifted up', s.prayers >= 100),
