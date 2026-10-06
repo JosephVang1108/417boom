@@ -109,6 +109,17 @@ Apple Developer: **approved** (free + paid). Remaining:
 - Saved verses (bookmarks) on the Journey page
 
 **With store build:** widgets, routines, shareable verse-card images
+
+**Parked ideas (Joseph, Oct 2026):**
+- **Profiles with quick-switch** — e.g. "Kids" and "Parents" on one device.
+  How he talks adapts per profile: simpler gentler language, kid-safe
+  story pacing and bedtime mode for Kids; full depth for Parents.
+  Pairs naturally with story time and sermon mode.
+- **Sermon mode** — he preaches a short sermon (topic of the day or
+  requested). Sessions recordable/replayable. Free tier: a rotating
+  recorded sermon; Premium: more sermons + live LLM-generated sermons
+  relevant to what the listener is walking through.
+
 **Post-launch (needs accounts + moderation):** community prayer wall — he
 prays aloud over the community's requests; Bible trivia / kids mode
 
