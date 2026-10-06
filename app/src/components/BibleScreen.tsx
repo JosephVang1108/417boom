@@ -439,7 +439,7 @@ export default function BibleScreen({ visible, onClose }: Props) {
             {verses && selected.size > 0 && (
               <View style={styles.shareBar}>
                 <Pressable style={styles.shareButton} onPress={shareSelected}>
-                  <Medallion uri={MEDALLIONS.dove} size={20} fallback="🕊️" />
+                  <Medallion source={MEDALLIONS.dove} size={20} fallback="🕊️" />
                   <Text style={styles.shareButtonText}>
                     Share {selected.size}{' '}
                     {selected.size === 1 ? 'verse' : 'verses'}

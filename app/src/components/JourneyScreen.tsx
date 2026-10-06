@@ -35,24 +35,23 @@ const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' });
 // The story shelf, in order of popularity. The first is free; the rest
 // unlock with Premium at launch. (For now he'll still tell any story
 // you ask him for out loud — this shelf is the browsing experience.)
-const STORY_ART = (hash: string) => `https://g.tlcdn.com/gen/${hash}.jpg`;
 const STORIES: {
   title: string;
   ask: string;
   emoji: string;
-  icon: string;
+  icon: number;
   free?: boolean;
 }[] = [
-  { title: 'David & Goliath', ask: 'David and Goliath', emoji: '🪨', icon: STORY_ART('721dff69351842afbb6590271f8d5620'), free: true },
-  { title: 'The Birth of Jesus', ask: 'the birth of Jesus', emoji: '⭐', icon: STORY_ART('9b36428081044649b5951e7fff2fc649') },
-  { title: 'The Resurrection', ask: 'the resurrection of Jesus', emoji: '🌅', icon: STORY_ART('4d3623c4acfb4f3dba19a00bf58423b8') },
-  { title: 'Noah & the Flood', ask: 'Noah and the flood', emoji: '🌈', icon: STORY_ART('1f2f51e55be9451085df14b7408ebf9b') },
-  { title: 'The Exodus', ask: 'the Exodus', emoji: '🌊', icon: STORY_ART('62f00aabf4a14804a95a2afb73e881b4') },
-  { title: "Daniel in the Lions' Den", ask: "Daniel in the lions' den", emoji: '🦁', icon: STORY_ART('c0015747e48345e0827ded2500e761c1') },
-  { title: 'Jonah & the Great Fish', ask: 'Jonah and the great fish', emoji: '🐋', icon: STORY_ART('e4cd7aa3bda042a9bc4d472ac92887be') },
-  { title: 'The Prodigal Son', ask: 'the prodigal son', emoji: '🏡', icon: STORY_ART('34e6a66e7fbf4d9ca97375162c6e2d55') },
-  { title: 'Creation', ask: 'the creation of the world', emoji: '🌍', icon: STORY_ART('e3994a1fb3f44586b31a0c8f9c5d5968') },
-  { title: 'Queen Esther', ask: 'Queen Esther', emoji: '💛', icon: STORY_ART('81f4f79ca7c04fdcb026a7fb5c3bdf57') },
+  { title: 'David & Goliath', ask: 'David and Goliath', emoji: '🪨', icon: require('../../assets/media/s-david.jpg'), free: true },
+  { title: 'The Birth of Jesus', ask: 'the birth of Jesus', emoji: '⭐', icon: require('../../assets/media/s-nativity.jpg') },
+  { title: 'The Resurrection', ask: 'the resurrection of Jesus', emoji: '🌅', icon: require('../../assets/media/s-resurrection.jpg') },
+  { title: 'Noah & the Flood', ask: 'Noah and the flood', emoji: '🌈', icon: require('../../assets/media/s-noah.jpg') },
+  { title: 'The Exodus', ask: 'the Exodus', emoji: '🌊', icon: require('../../assets/media/s-exodus.jpg') },
+  { title: "Daniel in the Lions' Den", ask: "Daniel in the lions' den", emoji: '🦁', icon: require('../../assets/media/s-daniel.jpg') },
+  { title: 'Jonah & the Great Fish', ask: 'Jonah and the great fish', emoji: '🐋', icon: require('../../assets/media/s-jonah.jpg') },
+  { title: 'The Prodigal Son', ask: 'the prodigal son', emoji: '🏡', icon: require('../../assets/media/s-prodigal.jpg') },
+  { title: 'Creation', ask: 'the creation of the world', emoji: '🌍', icon: require('../../assets/media/s-creation.jpg') },
+  { title: 'Queen Esther', ask: 'Queen Esther', emoji: '💛', icon: require('../../assets/media/s-esther.jpg') },
 ];
 
 /**
@@ -100,7 +99,7 @@ export default function JourneyScreen({
 
   const badgeCard = (b: Badge) => (
     <View key={b.id} style={[styles.badge, !b.earned && styles.badgeLocked]}>
-      <Medallion uri={b.icon} size={54} fallback={b.emoji} />
+      <Medallion source={b.icon} size={54} fallback={b.emoji} />
       <Text style={styles.badgeName}>{b.name}</Text>
       <Text style={styles.badgeDesc}>{b.desc}</Text>
     </View>
@@ -124,7 +123,7 @@ export default function JourneyScreen({
         <ScrollView contentContainerStyle={styles.content}>
           {/* The walk so far */}
           <View style={styles.streakCard}>
-            <Medallion uri={MEDALLIONS.dove} size={52} fallback="🕊️" />
+            <Medallion source={MEDALLIONS.dove} size={52} fallback="🕊️" />
             <Text style={styles.streakBig}>Day {nowStreak}</Text>
             <Text style={styles.streakTogether}>walking together</Text>
             <Text style={styles.streakSub}>
@@ -157,7 +156,7 @@ export default function JourneyScreen({
 
           {/* Straight into the Word */}
           <Pressable style={styles.bibleButton} onPress={onOpenBible}>
-            <Medallion uri={MEDALLIONS.book} size={26} fallback="📖" />
+            <Medallion source={MEDALLIONS.book} size={26} fallback="📖" />
             <View style={styles.bibleButtonBody}>
               <Text style={styles.bibleButtonText}>Open the Bible</Text>
               <Text style={styles.bibleButtonSub}>
@@ -173,7 +172,7 @@ export default function JourneyScreen({
             onPress={() => onOpenDevotional()}
           >
             <Medallion
-              uri={'https://g.tlcdn.com/gen/3785b1ad19964d7c8f776b37b08906f7.jpg'}
+              source={MEDALLIONS.firstLight}
               size={26}
               fallback="🌅"
             />
@@ -219,7 +218,7 @@ export default function JourneyScreen({
                 style={styles.storyCard}
                 onPress={() => openStory(s)}
               >
-                <Medallion uri={s.icon} size={50} fallback={s.emoji} />
+                <Medallion source={s.icon} size={50} fallback={s.emoji} />
                 <Text style={styles.storyTitle}>{s.title}</Text>
                 <Text style={[styles.storyTag, s.free && styles.storyTagFree]}>
                   {s.free ? 'FREE' : '🔒 PREMIUM'}
