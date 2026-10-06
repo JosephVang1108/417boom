@@ -350,22 +350,28 @@ async function speakDevice(text: string, onDone: () => void): Promise<void> {
     devicePicked = true;
     try {
       const voices = await Speech.getAvailableVoicesAsync();
-      const english = voices.filter((v) => v.language?.startsWith('en'));
-      const preferred = ['aaron', 'daniel', 'arthur', 'fred', 'alex', 'gordon'];
-      const found = english.find((v) =>
+      // American English only — otherwise iOS hands us Daniel/Arthur
+      // (British) and he suddenly sounds like a BBC newsreader.
+      const american = voices.filter((v) => v.language === 'en-US');
+      const pool = american.length
+        ? american
+        : voices.filter((v) => v.language?.startsWith('en'));
+      const preferred = ['aaron', 'fred', 'alex', 'evan', 'nathan', 'tom'];
+      const found = pool.find((v) =>
         preferred.some(
           (p) =>
             v.name?.toLowerCase().includes(p) ||
             v.identifier?.toLowerCase().includes(p)
         )
       );
-      devicePick = found?.identifier;
+      devicePick = (found ?? american[0])?.identifier;
     } catch {
       devicePick = undefined;
     }
   }
   Speech.speak(text.replace(/\[[^\]]*\]/g, ''), {
     voice: devicePick,
+    language: 'en-US',
     rate: 0.88,
     pitch: 0.72,
     onDone,

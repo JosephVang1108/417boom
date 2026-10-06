@@ -21,8 +21,10 @@ interface Props {
   hasVoiceKey: boolean;
   backendMode: boolean;
   verseEnabled: boolean;
+  eveningEnabled: boolean;
   journal: PrayerEntry[];
   onToggleVerse: (enabled: boolean) => void;
+  onToggleEvening: (enabled: boolean) => void;
   onSaveName: (name: string) => void;
   onSaveVoiceId: (id: string) => void;
   onSaveAiKey: (key: string) => void;
@@ -41,8 +43,10 @@ export default function SettingsModal({
   hasVoiceKey,
   backendMode,
   verseEnabled,
+  eveningEnabled,
   journal,
   onToggleVerse,
+  onToggleEvening,
   onSaveName,
   onSaveVoiceId,
   onSaveAiKey,
@@ -221,27 +225,20 @@ export default function SettingsModal({
               autoCorrect={false}
             />
 
-            <Text style={styles.section}>Custom voice (optional)</Text>
-            <Text style={styles.body}>
-              Design a voice in ElevenLabs (Voices → Voice Design), then paste
-              its Voice ID here to use it. Leave empty for the default voice.
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={voiceIdDraft}
-              onChangeText={setVoiceIdDraft}
-              placeholder="Voice ID, e.g. pNInz6obpgDQ…"
-              placeholderTextColor="#6E6E66"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <Text style={styles.section}>Daily verse</Text>
+            <Text style={styles.section}>Daily notifications</Text>
             <View style={styles.toggleRow}>
               <Text style={styles.body}>A morning verse at 8:00 AM</Text>
               <Switch
                 value={verseEnabled}
                 onValueChange={onToggleVerse}
+                trackColor={{ true: '#B9964E' }}
+              />
+            </View>
+            <View style={styles.toggleRow}>
+              <Text style={styles.body}>A goodnight nudge at 9:00 PM</Text>
+              <Switch
+                value={eveningEnabled}
+                onValueChange={onToggleEvening}
                 trackColor={{ true: '#B9964E' }}
               />
             </View>
