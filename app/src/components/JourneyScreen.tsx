@@ -9,7 +9,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { recentMornings } from '../lib/dailyVerse';
 import * as journal from '../lib/journal';
 import {
   Badge,
@@ -71,6 +70,7 @@ export default function JourneyScreen({
 }: Props) {
   const [stats, setStats] = useState<JourneyStats>(getStats());
   const [badgesOpen, setBadgesOpen] = useState(false);
+  const [allBadgesOpen, setAllBadgesOpen] = useState(false);
 
   useEffect(() => {
     if (visible) loadStats().then((s) => setStats({ ...s }));
@@ -264,32 +264,20 @@ export default function JourneyScreen({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.carousel}
             >
+              {/* First tile: open the whole cabinet at once. */}
+              <Pressable
+                style={[styles.badge, styles.badgeAllTile]}
+                onPress={() => setAllBadgesOpen(true)}
+              >
+                <Medallion source={MEDALLIONS.dove} size={54} fallback="🕊️" />
+                <Text style={styles.badgeName}>See them all</Text>
+                <Text style={styles.badgeDesc}>
+                  {earned.length} earned · tap to view
+                </Text>
+              </Pressable>
               {badges.map(badgeCard)}
             </ScrollView>
           )}
-
-          {/* Mornings worth returning to */}
-          <Text style={styles.sectionTitle}>Past mornings</Text>
-          <View style={styles.groupCardLike}>
-            {recentMornings(7).map((m, i) => (
-              <Pressable
-                key={m.date.toDateString()}
-                style={[styles.morningRow, i < 6 && styles.morningRowLine]}
-                onPress={() => onOpenDevotional(m.date)}
-              >
-                <Text style={styles.morningDay}>
-                  {i === 0
-                    ? 'Today'
-                    : m.date.toLocaleDateString(undefined, {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                </Text>
-                <Text style={styles.morningRef}>{m.verse.ref}</Text>
-              </Pressable>
-            ))}
-          </View>
 
           {/* Prayers being carried */}
           {prayers.length > 0 && (
@@ -313,6 +301,48 @@ export default function JourneyScreen({
             verse you share counts. Keep walking.
           </Text>
         </ScrollView>
+
+        {/* The whole badge cabinet, all at once — earned first. */}
+        <Modal
+          visible={allBadgesOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setAllBadgesOpen(false)}
+        >
+          <View style={styles.galleryBackdrop}>
+            <View style={styles.galleryCard}>
+              <View style={styles.galleryHeader}>
+                <Text style={styles.galleryTitle}>
+                  Your badges · {earned.length} of {badges.length}
+                </Text>
+                <Pressable
+                  onPress={() => setAllBadgesOpen(false)}
+                  hitSlop={12}
+                >
+                  <Text style={styles.headerButton}>Close</Text>
+                </Pressable>
+              </View>
+              <ScrollView contentContainerStyle={styles.galleryGrid}>
+                {[...badges]
+                  .sort((a, b) => Number(b.earned) - Number(a.earned))
+                  .map((b) => (
+                    <View
+                      key={b.id}
+                      style={[
+                        styles.gridBadge,
+                        !b.earned && styles.badgeLocked,
+                      ]}
+                    >
+                      <Medallion source={b.icon} size={48} fallback={b.emoji} />
+                      <Text style={styles.gridBadgeName} numberOfLines={2}>
+                        {b.name}
+                      </Text>
+                    </View>
+                  ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     </Modal>
   );
@@ -577,33 +607,63 @@ const styles = StyleSheet.create({
     marginTop: 3,
     textAlign: 'center',
   },
-  groupCardLike: {
-    backgroundColor: CARD,
-    borderRadius: 16,
+  badgeAllTile: {
+    backgroundColor: 'rgba(139,107,46,0.14)',
+    borderColor: GOLD,
+  },
+  galleryBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  galleryCard: {
+    backgroundColor: PAPER,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: EDGE,
+    maxHeight: '82%',
     overflow: 'hidden',
   },
-  morningRow: {
+  galleryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  morningRowLine: {
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(217,199,161,0.5)',
+    borderBottomColor: EDGE,
   },
-  morningDay: {
+  galleryTitle: {
     color: INK,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  morningRef: {
-    color: INK_SOFT,
-    fontSize: 13,
+    fontSize: 16,
+    fontWeight: '700',
     fontFamily: SERIF,
+  },
+  galleryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 16,
+    paddingBottom: 26,
+  },
+  gridBadge: {
+    width: '29%',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: '#C9AE6E',
+    alignItems: 'center',
+  },
+  gridBadgeName: {
+    color: INK,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 6,
+    textAlign: 'center',
   },
   prayerCard: {
     borderRadius: 14,
