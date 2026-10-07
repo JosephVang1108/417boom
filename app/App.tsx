@@ -92,6 +92,9 @@ export default function App() {
   const [daysTogether, setDaysTogether] = useState(0);
   const [verseEnabled, setVerseEnabled] = useState(false);
   const [eveningEnabled, setEveningEnabled] = useState(false);
+  // How much of the conversation covers his face: 'peek' shows only
+  // the latest exchange, 'full' the scrollable history, 'hidden' none.
+  const [chatMode, setChatMode] = useState<'peek' | 'full' | 'hidden'>('peek');
 
   const recorder = useAudioRecorder({
     ...RecordingPresets.HIGH_QUALITY,
@@ -519,9 +522,33 @@ export default function App() {
             )}
           </View>
 
+          <View style={styles.chatToggleRow}>
+            <Pressable
+              onPress={() =>
+                setChatMode((m) =>
+                  m === 'peek' ? 'full' : m === 'full' ? 'hidden' : 'peek'
+                )
+              }
+              hitSlop={10}
+              style={styles.chatToggle}
+            >
+              <Text style={styles.chatToggleText}>
+                {chatMode === 'peek'
+                  ? 'Chat ▴'
+                  : chatMode === 'full'
+                    ? 'Chat ▾'
+                    : 'Chat ◦'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {chatMode !== 'hidden' && (
           <ScrollView
             ref={scrollRef}
-            style={styles.conversation}
+            style={[
+              styles.conversation,
+              chatMode === 'peek' && styles.conversationPeek,
+            ]}
             contentContainerStyle={styles.conversationContent}
             onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
           >
@@ -531,7 +558,7 @@ export default function App() {
                 listen and answer with words of scripture.
               </Text>
             )}
-            {history.map((ex) => (
+            {(chatMode === 'peek' ? history.slice(-1) : history).map((ex) => (
               <View key={ex.id} style={styles.exchange}>
                 {!!ex.question && (
                   <View style={styles.userBubble}>
@@ -561,6 +588,7 @@ export default function App() {
               </View>
             ))}
           </ScrollView>
+          )}
 
           <View style={styles.inputBar}>
             <Pressable
@@ -817,6 +845,28 @@ const styles = StyleSheet.create({
   conversation: {
     maxHeight: SCREEN_H * 0.34,
     flexGrow: 0,
+  },
+  conversationPeek: {
+    // Just the latest word from him — his face stays in view.
+    maxHeight: SCREEN_H * 0.2,
+  },
+  chatToggleRow: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 18,
+    paddingBottom: 4,
+  },
+  chatToggle: {
+    backgroundColor: 'rgba(8, 8, 8, 0.45)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  chatToggleText: {
+    color: 'rgba(230, 230, 220, 0.8)',
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   conversationContent: {
     paddingHorizontal: 18,

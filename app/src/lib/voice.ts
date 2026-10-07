@@ -250,16 +250,44 @@ export function playUri(uri: string, onDone: () => void): void {
   }
   const player = createAudioPlayer({ uri });
   currentPlayer = player;
-  player.addListener('playbackStatusUpdate', (status) => {
-    if (status.didJustFinish) {
-      if (currentPlayer === player) currentPlayer = null;
-      try {
-        player.remove();
-      } catch {
-        // already released
-      }
-      onDone();
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearInterval(watchdog);
+    if (currentPlayer === player) currentPlayer = null;
+    try {
+      player.remove();
+    } catch {
+      // already released
     }
+    onDone();
+  };
+  // Watchdog: a failed or stalled stream never fires didJustFinish —
+  // without this he'd stay praying, eyes closed, forever.
+  let lastTime = -1;
+  let stalled = 0;
+  const watchdog = setInterval(() => {
+    if (currentPlayer !== player) {
+      clearInterval(watchdog);
+      return;
+    }
+    let t = lastTime;
+    try {
+      t = player.currentTime;
+    } catch {
+      // player unreadable — counts as a stall
+    }
+    if (t <= lastTime) {
+      stalled += 1;
+      if (stalled >= 7) finish(); // ~14s without progress
+    } else {
+      stalled = 0;
+      lastTime = t;
+    }
+  }, 2000);
+  player.addListener('playbackStatusUpdate', (status) => {
+    if (status.didJustFinish) finish();
   });
   player.play();
 }
