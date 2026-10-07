@@ -192,14 +192,16 @@ export async function synthesize(
             model_id: model,
             voice_settings,
             seed: VOICE_SEED,
+            // Turbo pins the language — multilingual guesses the
+            // accent, which is where the British slips came from.
+            ...(model === 'eleven_turbo_v2_5' ? { language_code: 'en' } : {}),
           }),
         }
       );
     };
 
-    const models: ElevenModel[] = options.read
-      ? ['eleven_turbo_v2_5', 'eleven_multilingual_v2']
-      : ['eleven_v3', 'eleven_multilingual_v2'];
+    // Turbo for everything: fastest, cheapest, English-pinned.
+    const models: ElevenModel[] = ['eleven_turbo_v2_5', 'eleven_multilingual_v2'];
     const candidates = [
       ...(options.voice ? [options.voice] : []),
       ...(customVoiceId ? [customVoiceId] : []),
