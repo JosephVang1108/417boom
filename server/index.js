@@ -99,9 +99,12 @@ app.get('/tts', async (req, res) => {
       model === 'eleven_v3'
         ? { stability: 1.0, use_speaker_boost: true }
         : {
-            stability: 0.75,
+            // Expressiveness is safe to give back now that Turbo pins
+            // the language: stories get real inflection, prayers a
+            // touch of warmth, conversation stays steady.
+            stability: story ? 0.5 : pray ? 0.7 : 0.75,
             similarity_boost: 0.9,
-            style: 0.0,
+            style: story ? 0.45 : pray ? 0.2 : 0.1,
             use_speaker_boost: true,
             // He never rushes. Prayers slowest of all, stories take
             // their time, conversation stays gentle.
