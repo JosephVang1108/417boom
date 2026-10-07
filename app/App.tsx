@@ -294,7 +294,7 @@ export default function App() {
         setSpeaking(false);
         setPraying(false);
       },
-      { story: response.isStory }
+      { story: response.isStory, prayer: response.isPrayer }
     );
   };
 
