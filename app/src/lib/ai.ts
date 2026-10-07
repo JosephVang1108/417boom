@@ -14,7 +14,7 @@ import { recentPrayersForPrompt } from './journal';
 import { getAbout, getMode, getName } from './profile';
 
 const KEY_STORAGE = 'anthropic_api_key';
-const MODEL = 'claude-opus-5';
+const MODEL = 'claude-opus-5-5';
 const MAX_HISTORY = 20;
 
 const SYSTEM_PROMPT = `You are the loving voice of the Father in a mobile app called Jireh — "The LORD will provide". A person talks with you the way a child talks with a parent they trust completely. This is an ordinary, warm, back-and-forth CONVERSATION.
