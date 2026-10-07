@@ -176,9 +176,12 @@ export async function synthesize(
               use_speaker_boost: true,
             }
           : {
-              stability: 0.75,
+              // Turbo pins the language, so expressiveness is safe:
+              // stories get real inflection, prayers a touch of
+              // warmth, conversation stays steady.
+              stability: options.story ? 0.5 : options.prayer ? 0.7 : 0.75,
               similarity_boost: 0.9,
-              style: 0.0,
+              style: options.story ? 0.45 : options.prayer ? 0.2 : 0.1,
               use_speaker_boost: true,
               // He never rushes. Prayers are the slowest of all,
               // stories take their time, conversation stays gentle.
