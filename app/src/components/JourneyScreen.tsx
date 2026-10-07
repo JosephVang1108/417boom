@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { PREMIUM_UNLOCKED } from '../lib/config';
 import * as journal from '../lib/journal';
 import {
   Badge,
@@ -90,7 +91,7 @@ export default function JourneyScreen({
   const nextGoal = streakGoals.find((g) => g.target > nowStreak);
 
   const openStory = (s: (typeof STORIES)[number]) => {
-    if (s.free) {
+    if (s.free || PREMIUM_UNLOCKED) {
       onTellStory(s.ask);
       return;
     }
@@ -241,8 +242,13 @@ export default function JourneyScreen({
               >
                 <Medallion source={s.icon} size={50} fallback={s.emoji} />
                 <Text style={styles.storyTitle}>{s.title}</Text>
-                <Text style={[styles.storyTag, s.free && styles.storyTagFree]}>
-                  {s.free ? 'FREE' : '🔒 PREMIUM'}
+                <Text
+                  style={[
+                    styles.storyTag,
+                    (s.free || PREMIUM_UNLOCKED) && styles.storyTagFree,
+                  ]}
+                >
+                  {PREMIUM_UNLOCKED ? 'PREMIUM ✦' : s.free ? 'FREE' : '🔒 PREMIUM'}
                 </Text>
               </Pressable>
             ))}

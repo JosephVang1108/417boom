@@ -15,7 +15,11 @@ export function backendConfigured(): boolean {
 // Premium gate. False = free tier: one full story (David & Goliath),
 // everything else gets a warm taste + invitation. Becomes a real
 // subscription check in the store build.
-export const PREMIUM_UNLOCKED = false;
+//
+// ⚠️ TRUE FOR FAMILY TESTFLIGHT ONLY — every tester gets the full
+// Premium experience. MUST be set back to false (or replaced by the
+// real subscription check) before the public App Store launch.
+export const PREMIUM_UNLOCKED = true;
 
 /** The one story free-tier listeners get in full. */
 export const FREE_STORY = 'David and Goliath';
