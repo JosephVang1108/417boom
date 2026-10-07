@@ -108,8 +108,10 @@ export function getCustomVoiceId(): string | null {
 }
 
 export interface SpeakOptions {
-  /** Storytelling delivery: livelier, more expressive pacing. */
+  /** Storytelling delivery: unhurried, room for the scenes to land. */
   story?: boolean;
+  /** Prayer: the slowest, most reverent pace of all. */
+  prayer?: boolean;
   /** Long-form reading (Bible chapters): fast engine, quick start. */
   read?: boolean;
   /** Voice override for this utterance (e.g. the Bible reading voice). */
@@ -143,6 +145,7 @@ export async function synthesize(
       token: BACKEND_TOKEN!,
       text,
       ...(options.story ? { story: '1' } : {}),
+      ...(options.prayer ? { pray: '1' } : {}),
       ...(options.read ? { read: '1' } : {}),
       ...(options.voice
         ? { voice: options.voice }
@@ -177,7 +180,9 @@ export async function synthesize(
               similarity_boost: 0.9,
               style: 0.0,
               use_speaker_boost: true,
-              speed: options.story ? 1.0 : 0.95,
+              // He never rushes. Prayers are the slowest of all,
+              // stories take their time, conversation stays gentle.
+              speed: options.prayer ? 0.85 : options.story ? 0.88 : 0.92,
             };
       return fetch(
         `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,

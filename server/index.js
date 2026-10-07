@@ -84,6 +84,7 @@ app.get('/tts', async (req, res) => {
   const text = String(req.query.text || '').slice(0, 6000);
   if (!text.trim()) return res.status(400).json({ error: 'text required' });
   const story = req.query.story === '1';
+  const pray = req.query.pray === '1';
 
   const request = (voiceId, model) => {
     const speakable =
@@ -102,7 +103,9 @@ app.get('/tts', async (req, res) => {
             similarity_boost: 0.9,
             style: 0.0,
             use_speaker_boost: true,
-            speed: story ? 1.0 : 0.95,
+            // He never rushes. Prayers slowest of all, stories take
+            // their time, conversation stays gentle.
+            speed: pray ? 0.85 : story ? 0.88 : 0.92,
           };
     // Turbo supports pinning the language — do it so long Bible
     // passages can't wander either.
