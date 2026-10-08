@@ -37,9 +37,24 @@ jobs:
           SRC_URL: ${{ inputs.url }}
           ASSET_NAME: ${{ inputs.name }}
         run: |
-          curl -fL --retry 3 --retry-delay 5 -o "$ASSET_NAME" "$SRC_URL"
+          curl -fL --retry 3 --retry-delay 5 -o "original-$ASSET_NAME" "$SRC_URL"
+          ls -lh "original-$ASSET_NAME"
+          sha256sum "original-$ASSET_NAME"
+
+      # Renders arrive as near-lossless masters (hundreds of MB) — far
+      # too heavy to stream to a phone. The asset under the plain name
+      # is a phone-friendly encode; the master is kept alongside it for
+      # future re-encodes and re-renders.
+      - name: Make the streaming copy
+        env:
+          ASSET_NAME: ${{ inputs.name }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          ffmpeg -hide_banner -loglevel warning -i "original-$ASSET_NAME" \
+            -c:v libx264 -crf 23 -preset medium -pix_fmt yuv420p \
+            -c:a aac -b:a 128k -movflags +faststart \
+            "$ASSET_NAME"
           ls -lh "$ASSET_NAME"
-          sha256sum "$ASSET_NAME"
 
       - name: Attach to the media release
         env:
@@ -49,4 +64,4 @@ jobs:
           gh release view media >/dev/null 2>&1 || \
             gh release create media --title "App media" \
               --notes "Recorded sermons and stories the app streams. Each file: https://github.com/${{ github.repository }}/releases/download/media/<name>"
-          gh release upload media "$ASSET_NAME" --clobber
+          gh release upload media "$ASSET_NAME" "original-$ASSET_NAME" --clobber
