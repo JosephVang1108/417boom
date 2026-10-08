@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { PREMIUM_UNLOCKED } from '../lib/config';
 import * as journal from '../lib/journal';
+import { RECORDED_SERMONS, RecordedSermon } from '../lib/media';
 import {
   Badge,
   daysTogether,
@@ -21,6 +22,7 @@ import {
   MEDALLIONS,
 } from '../lib/stats';
 import Medallion from './Medallion';
+import SermonTheater from './SermonTheater';
 
 interface Props {
   visible: boolean;
@@ -72,6 +74,7 @@ export default function JourneyScreen({
   const [stats, setStats] = useState<JourneyStats>(getStats());
   const [badgesOpen, setBadgesOpen] = useState(false);
   const [allBadgesOpen, setAllBadgesOpen] = useState(false);
+  const [theater, setTheater] = useState<RecordedSermon | null>(null);
 
   useEffect(() => {
     if (visible) loadStats().then((s) => setStats({ ...s }));
@@ -207,6 +210,25 @@ export default function JourneyScreen({
             <Text style={styles.rowArrowDark}>›</Text>
           </Pressable>
 
+          {/* Recorded sermons — real renders of him preaching */}
+          <Text style={styles.sectionTitle}>Watch him preach</Text>
+          {RECORDED_SERMONS.map((s) => (
+            <Pressable
+              key={s.id}
+              style={styles.wordButton}
+              onPress={() => setTheater(s)}
+            >
+              <Medallion source={s.icon} size={26} fallback={s.emoji} />
+              <View style={styles.bibleButtonBody}>
+                <Text style={styles.wordButtonText}>{s.title}</Text>
+                <Text style={styles.wordButtonSub}>
+                  {s.tagline} · {s.minutes} min
+                </Text>
+              </View>
+              <Text style={styles.rowArrowDark}>▶</Text>
+            </Pressable>
+          ))}
+
           {/* Lifetime moments */}
           <View style={styles.countRow}>
             <View style={styles.countCard}>
@@ -307,6 +329,15 @@ export default function JourneyScreen({
             verse you share counts. Keep walking.
           </Text>
         </ScrollView>
+
+        {/* The theater: mounted only while something is playing. */}
+        {theater && (
+          <SermonTheater
+            title={theater.title}
+            url={theater.url}
+            onClose={() => setTheater(null)}
+          />
+        )}
 
         {/* The whole badge cabinet, all at once — earned first. */}
         <Modal

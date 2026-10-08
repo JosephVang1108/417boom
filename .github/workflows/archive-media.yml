@@ -1,0 +1,52 @@
+# Rescues finished renders into permanent storage.
+#
+# Lip-sync renders come back as temporary links (Magica deletes them
+# after 7 days). This workflow runs on GitHub's servers: it downloads
+# the file and attaches it to the repo's "media" release, where the
+# app streams it from — permanent, free, CDN-served.
+#
+# Run it from the Actions tab (or API) with the temporary URL and the
+# final file name, e.g. sermon-come-back-home.mp4. The file is then
+# served forever at:
+#   https://github.com/<owner>/<repo>/releases/download/media/<name>
+name: Archive media
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Temporary URL of the rendered video
+        required: true
+        type: string
+      name:
+        description: Final asset file name (e.g. sermon-come-back-home.mp4)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download
+        env:
+          SRC_URL: ${{ inputs.url }}
+          ASSET_NAME: ${{ inputs.name }}
+        run: |
+          curl -fL --retry 3 --retry-delay 5 -o "$ASSET_NAME" "$SRC_URL"
+          ls -lh "$ASSET_NAME"
+          sha256sum "$ASSET_NAME"
+
+      - name: Attach to the media release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET_NAME: ${{ inputs.name }}
+        run: |
+          gh release view media >/dev/null 2>&1 || \
+            gh release create media --title "App media" \
+              --notes "Recorded sermons and stories the app streams. Each file: https://github.com/${{ github.repository }}/releases/download/media/<name>"
+          gh release upload media "$ASSET_NAME" --clobber
