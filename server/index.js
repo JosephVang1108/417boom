@@ -21,6 +21,20 @@
 
 const express = require('express');
 const { Readable } = require('node:stream');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+
+// Bible-reading audio cache: scripture never changes, so each passage
+// is generated ONCE per voice and replayed free forever after. Lives
+// on local disk — ephemeral on Render (cleared by deploys), so it
+// rebuilds itself; attach a persistent disk later to make it eternal.
+const CACHE_DIR = process.env.AUDIO_CACHE_DIR || path.join(__dirname, 'tts-cache');
+try {
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
+} catch (err) {
+  console.error('cache dir unavailable', err);
+}
 
 const {
   APP_TOKEN,
@@ -133,7 +147,29 @@ app.get('/tts', async (req, res) => {
   };
 
   try {
-    const voices = [String(req.query.voice || VOICE_ID), FALLBACK_VOICE_ID];
+    const requestedVoice = String(req.query.voice || VOICE_ID);
+
+    // Scripture reading (read=1) is cached: the text never changes, so
+    // pay ElevenLabs once per passage per voice, then serve the saved
+    // file free forever. Conversation and stories are unique each time
+    // and are never cached.
+    const cacheable = req.query.read === '1';
+    const cacheFile = cacheable
+      ? path.join(
+          CACHE_DIR,
+          crypto
+            .createHash('sha256')
+            .update(JSON.stringify(['read-v1', requestedVoice, text]))
+            .digest('hex') + '.mp3'
+        )
+      : null;
+    if (cacheFile && fs.existsSync(cacheFile)) {
+      res.status(200).type('audio/mpeg');
+      fs.createReadStream(cacheFile).pipe(res);
+      return;
+    }
+
+    const voices = [requestedVoice, FALLBACK_VOICE_ID];
     // Turbo for EVERYTHING: it is the fastest engine, the cheapest, and
     // the only one that hard-pins the language to English — multilingual
     // v2 guesses the accent per request, which is where the British
@@ -150,7 +186,31 @@ app.get('/tts', async (req, res) => {
       return res.status(502).json({ error: 'voice generation failed' });
     }
     res.status(200).type('audio/mpeg');
-    Readable.fromWeb(upstream.body).pipe(res);
+    const audio = Readable.fromWeb(upstream.body);
+    audio.pipe(res);
+
+    if (cacheFile) {
+      // Tee the stream into the cache; only a COMPLETE file is kept
+      // ('wx' also means two simultaneous first listeners can't clash).
+      const partFile = cacheFile + '.part';
+      try {
+        const sink = fs.createWriteStream(partFile, { flags: 'wx' });
+        let failed = false;
+        const scrap = () => {
+          failed = true;
+          sink.destroy();
+          fs.promises.unlink(partFile).catch(() => {});
+        };
+        sink.on('error', scrap);
+        audio.on('error', scrap);
+        audio.pipe(sink);
+        sink.on('finish', () => {
+          if (!failed) fs.promises.rename(partFile, cacheFile).catch(() => {});
+        });
+      } catch {
+        // another listener is already writing it — just stream
+      }
+    }
   } catch (err) {
     console.error('tts error', err);
     if (!res.headersSent) res.status(502).json({ error: 'upstream failure' });
