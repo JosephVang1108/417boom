@@ -130,6 +130,12 @@ export default function App() {
     lastActivity.current = Date.now();
   };
 
+  // Only the newest exchange gets to speak. A reply that arrives late
+  // (two sends in flight, or racing the idle nudge) still shows its
+  // card, but hijacking the voice while the screen shows a different
+  // reply read as "it said something else out loud".
+  const latestExchangeId = useRef(0);
+
   // Repeated profanity or slurs: after the third strike he stops and
   // prays over them — a long prayer about the hate and for peace —
   // then the count starts fresh.
@@ -164,7 +170,9 @@ export default function App() {
         intro: encouragement(),
         verse: null,
       };
-      setHistory((h) => [...h, { id: nextId.current++, question: '', response: gentle }]);
+      const gid = nextId.current++;
+      latestExchangeId.current = gid;
+      setHistory((h) => [...h, { id: gid, question: '', response: gentle }]);
       if (speakIt) speak(gentle);
       markActive();
       // Back off so it stays precious: 2min -> ~3.5min -> ~6min -> 10min cap.
@@ -387,6 +395,7 @@ export default function App() {
     const question = (spokenQuestion ?? input).trim();
     if (!question) return;
     const id = nextId.current++;
+    latestExchangeId.current = id;
     // The screen (and anything stored) never shows profanity or slurs;
     // the original still goes to the AI so he can answer it with grace.
     const shown = cleanForDisplay(question);
@@ -417,7 +426,9 @@ export default function App() {
       stats.bump('prayers');
     }
     if (response.isStory) stats.bump('stories');
-    if (voiceOn) speak(response);
+    // Speak only if this is still the newest exchange — a reply that
+    // lost the race keeps its card but stays silent.
+    if (voiceOn && id === latestExchangeId.current) speak(response);
   };
 
   const saveKey = async (key: string) => {
