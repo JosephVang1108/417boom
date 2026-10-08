@@ -283,7 +283,7 @@ export default function BibleScreen({ visible, onClose }: Props) {
       <Text style={styles.groupLabel}>{title.toUpperCase()}</Text>
       <View style={styles.stack}>
         {books.map((b, i) => {
-          const leather = LEATHERS[(b.name.length + i) % LEATHERS.length];
+          const leather = leatherFor(b.name);
           const inset = SPINE_INSETS[i % SPINE_INSETS.length];
           return (
             <Pressable
@@ -403,7 +403,23 @@ export default function BibleScreen({ visible, onClose }: Props) {
 
         {book && chapter === null && (
           <ScrollView contentContainerStyle={styles.content}>
-            <Text style={styles.sectionTitle}>Choose a chapter</Text>
+            {/* The spine they tapped, now lying open before them. */}
+            <View
+              style={[
+                styles.openSpine,
+                {
+                  backgroundColor: leatherFor(book.name).bg,
+                  borderColor: leatherFor(book.name).edge,
+                },
+              ]}
+            >
+              <View style={styles.spineTooling} />
+              <Text style={styles.openSpineTitle}>{book.name}</Text>
+              <View style={styles.spineTooling} />
+            </View>
+            <Text style={styles.chapterCount}>
+              {book.chapters} {book.chapters === 1 ? 'chapter' : 'chapters'}
+            </Text>
             <View style={styles.grid}>
               {Array.from({ length: book.chapters }, (_, i) => i + 1).map((c) => (
                 <Pressable
@@ -542,6 +558,13 @@ const LEATHERS = [
 ];
 // How far each volume juts in or out of the stack.
 const SPINE_INSETS = [6, 0, 10, 3, 12, 1, 8, 4];
+
+// Each book keeps ITS leather everywhere — the spine on the shelf and
+// the opened book on the chapter screen match.
+const leatherFor = (name: string) =>
+  LEATHERS[
+    [...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % LEATHERS.length
+  ];
 
 const styles = StyleSheet.create({
   root: {
@@ -734,19 +757,56 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD,
     marginTop: 10,
   },
+  openSpine: {
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    shadowColor: '#2A1C0E',
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  openSpineTitle: {
+    color: '#E9D9A6',
+    fontSize: 20,
+    fontFamily: SERIF,
+    fontWeight: '600',
+    letterSpacing: 2,
+    textAlign: 'center',
+    paddingVertical: 10,
+  },
+  chapterCount: {
+    color: INK_SOFT,
+    fontSize: 12,
+    fontStyle: 'italic',
+    fontFamily: SERIF,
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  // Small parchment rounds with a thin gold ring — the same quiet
+  // medallion language as the rest of the app.
   chapterChip: {
-    width: 52,
-    height: 44,
-    borderRadius: 12,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: EDGE,
+    borderColor: '#C9AE6E',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#8B6B2E',
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   chapterChipText: {
     color: INK,
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: SERIF,
   },
   verseLine: {
