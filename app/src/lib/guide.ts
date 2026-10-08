@@ -139,8 +139,9 @@ export function speakableRef(ref: string): string {
 
 /** The line spoken aloud by text-to-speech. */
 export function spokenText(response: GuideResponse): string {
-  // A prayer is spoken as-is; the verse (if any) stays on screen only.
-  if (response.isPrayer || !response.verse) return response.intro;
+  // Everything on the screen gets spoken — a verse shown but never
+  // read felt like a bug. After a prayer it lands as a benediction.
+  if (!response.verse) return response.intro;
   return `${response.intro} … As it is written in ${speakableRef(response.verse.ref)}: … ${response.verse.text}`;
 }
 
