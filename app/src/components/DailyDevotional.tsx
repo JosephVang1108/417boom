@@ -10,7 +10,11 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import { DailyVerse, getDevotionalFor } from '../lib/dailyVerse';
+import {
+  DailyVerse,
+  getDevotionalFor,
+  getEveningDevotionalFor,
+} from '../lib/dailyVerse';
 import { MEDALLIONS } from '../lib/stats';
 import Medallion from './Medallion';
 
@@ -19,6 +23,8 @@ interface Props {
   streak: number;
   /** Which morning to show — defaults to today. */
   forDate?: Date | null;
+  /** 'evening' closes the day: dusk glow, rest verse, same Amen. */
+  variant?: 'morning' | 'evening';
   onDone: () => void;
 }
 
@@ -33,8 +39,10 @@ export default function DailyDevotional({
   visible,
   streak,
   forDate,
+  variant = 'morning',
   onDone,
 }: Props) {
+  const evening = variant === 'evening';
   const [devotional, setDevotional] = useState<DailyVerse | null>(null);
   const [celebrating, setCelebrating] = useState(false);
 
@@ -46,7 +54,8 @@ export default function DailyDevotional({
 
   useEffect(() => {
     if (visible) {
-      setDevotional(getDevotionalFor(forDate ?? new Date()));
+      const d = forDate ?? new Date();
+      setDevotional(evening ? getEveningDevotionalFor(d) : getDevotionalFor(d));
       setCelebrating(false);
       enter.setValue(0);
       Animated.timing(enter, {
@@ -106,13 +115,26 @@ export default function DailyDevotional({
         {/* Soft dawn glow behind everything */}
         <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
           <Defs>
-            <RadialGradient id="dawn" cx="50%" cy="18%" r="75%">
-              <Stop offset="0%" stopColor="#B9964E" stopOpacity="0.28" />
-              <Stop offset="55%" stopColor="#B9964E" stopOpacity="0.08" />
+            <RadialGradient
+              id="dawn"
+              cx="50%"
+              cy={evening ? '85%' : '18%'}
+              r="75%"
+            >
+              <Stop
+                offset="0%"
+                stopColor={evening ? '#5B6B9E' : '#B9964E'}
+                stopOpacity="0.28"
+              />
+              <Stop
+                offset="55%"
+                stopColor={evening ? '#5B6B9E' : '#B9964E'}
+                stopOpacity="0.08"
+              />
               <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
             </RadialGradient>
           </Defs>
-          <Circle cx="50%" cy="18%" r="75%" fill="url(#dawn)" />
+          <Circle cx="50%" cy={evening ? '85%' : '18%'} r="75%" fill="url(#dawn)" />
         </Svg>
 
         {!celebrating ? (
@@ -132,7 +154,9 @@ export default function DailyDevotional({
               },
             ]}
           >
-            <Text style={styles.date}>{today.toUpperCase()}</Text>
+            <Text style={styles.date}>
+              {evening ? 'BEFORE YOU SLEEP' : today.toUpperCase()}
+            </Text>
             <View style={styles.divider} />
             <Text style={styles.verseText}>“{devotional.text}”</Text>
             <Text style={styles.verseRef}>{devotional.ref}</Text>
@@ -168,9 +192,11 @@ export default function DailyDevotional({
               }}
             >
               <Text style={styles.celebrateDay}>
-                Day {Math.max(streak, 1)}
+                {evening ? 'Rest easy' : `Day ${Math.max(streak, 1)}`}
               </Text>
-              <Text style={styles.celebrateSub}>walking together</Text>
+              <Text style={styles.celebrateSub}>
+                {evening ? 'he keeps watch tonight' : 'walking together'}
+              </Text>
             </Animated.View>
           </View>
         )}

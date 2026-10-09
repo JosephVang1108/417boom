@@ -10,6 +10,7 @@ import { DeviceMotion } from 'expo-sensors';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  AppState,
   Dimensions,
   KeyboardAvoidingView,
   PanResponder,
@@ -89,6 +90,7 @@ export default function App() {
   const [journeyOpen, setJourneyOpen] = useState(false);
   const [devotionalVisible, setDevotionalVisible] = useState(false);
   const [devotionalDate, setDevotionalDate] = useState<Date | null>(null);
+  const [eveningVisible, setEveningVisible] = useState(false);
   const [streak, setStreak] = useState(0);
   const [daysTogether, setDaysTogether] = useState(0);
   const [verseEnabled, setVerseEnabled] = useState(false);
@@ -123,6 +125,7 @@ export default function App() {
       bibleOpen ||
       journeyOpen ||
       devotionalVisible ||
+      eveningVisible ||
       onboardingVisible ||
       history.length === 0,
     voiceOn,
@@ -195,8 +198,17 @@ export default function App() {
       if (!onboarded) {
         setOnboardingVisible(true);
       } else {
-        // Returning visitor: the morning devotional, once per day.
-        dailyVerse.shouldShowDevotional().then(setDevotionalVisible);
+        // Returning visitor: two check-ins a day — the morning
+        // devotional, and from 8 PM the evening one. In the evening
+        // the night check-in wins; the morning stays reachable from
+        // the Journey page.
+        dailyVerse.shouldShowEveningDevotional().then((eve) => {
+          if (eve) {
+            setEveningVisible(true);
+          } else {
+            dailyVerse.shouldShowDevotional().then(setDevotionalVisible);
+          }
+        });
       }
     });
     touchStreak().then((s) => {
@@ -213,6 +225,21 @@ export default function App() {
       if (on || eve) await dailyVerse.refreshSchedule();
       rescheduleMissYou();
     });
+  }, []);
+
+  // Coming back from the background (e.g. tapping the 9 PM
+  // notification) re-checks the evening check-in — the cold-open
+  // effect above only runs once per launch.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        dailyVerse.shouldShowEveningDevotional().then((eve) => {
+          if (eve) setEveningVisible(true);
+        });
+      }
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const completeOnboarding = async (name: string, about: string) => {
@@ -725,6 +752,17 @@ export default function App() {
               }
               setDevotionalVisible(false);
               setDevotionalDate(null);
+              markActive();
+            }}
+          />
+
+          <DailyDevotional
+            visible={eveningVisible}
+            streak={streak}
+            variant="evening"
+            onDone={() => {
+              dailyVerse.markEveningSeen();
+              setEveningVisible(false);
               markActive();
             }}
           />
