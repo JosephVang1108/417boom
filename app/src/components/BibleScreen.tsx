@@ -21,6 +21,7 @@ import {
 } from '../data/bibleBooks';
 import * as stats from '../lib/stats';
 import { MEDALLIONS } from '../lib/stats';
+import * as tier from '../lib/tier';
 import * as voice from '../lib/voice';
 import Medallion from './Medallion';
 
@@ -193,6 +194,13 @@ export default function BibleScreen({ visible, onClose }: Props) {
       );
       return;
     }
+    // Free-tier meter (asleep while PREMIUM_UNLOCKED): one chapter a
+    // day read aloud; reading on screen stays free forever.
+    if (!tier.canReadChapter()) {
+      Alert.alert(tier.UPSELL.readTitle, tier.UPSELL.readBody);
+      return;
+    }
+    tier.noteChapterRead();
     const readOptions = {
       read: true,
       ...(readerId ? { voice: readerId } : {}),

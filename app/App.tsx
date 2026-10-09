@@ -40,6 +40,7 @@ import { backendConfigured } from './src/lib/config';
 import * as dailyVerse from './src/lib/dailyVerse';
 import * as journal from './src/lib/journal';
 import { touchStreak } from './src/lib/streak';
+import * as tier from './src/lib/tier';
 import { rescheduleMissYou } from './src/lib/missYou';
 import * as stats from './src/lib/stats';
 import { MEDALLIONS } from './src/lib/stats';
@@ -183,6 +184,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    tier.loadTier();
     loadStoredKey().then(() => setAiReady(isAiAvailable()));
     voice.loadVoiceKey().then(() => {
       setVoiceReady(voice.voiceAvailable());
@@ -394,6 +396,12 @@ export default function App() {
     markActive();
     const question = (spokenQuestion ?? input).trim();
     if (!question) return;
+    // Free-tier meter (asleep while PREMIUM_UNLOCKED). Prayer always
+    // gets through at least once a day.
+    if (!tier.canSend(question)) {
+      Alert.alert(tier.UPSELL.messagesTitle, tier.UPSELL.messagesBody);
+      return;
+    }
     const id = nextId.current++;
     latestExchangeId.current = id;
     // The screen (and anything stored) never shows profanity or slurs;
@@ -421,6 +429,7 @@ export default function App() {
     if (needHatePrayer) hateStrikes.current = 0;
 
     setHistory((h) => h.map((ex) => (ex.id === id ? { ...ex, response } : ex)));
+    tier.noteMessage(!!response.isPrayer);
     if (response.isPrayer && !needHatePrayer) {
       journal.addPrayer(shown);
       stats.bump('prayers');
