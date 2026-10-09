@@ -93,6 +93,7 @@ export default function App() {
   const [devotionalDate, setDevotionalDate] = useState<Date | null>(null);
   const [eveningVisible, setEveningVisible] = useState(false);
   const [moodAsk, setMoodAsk] = useState(false);
+  const [moodOpen, setMoodOpen] = useState(false); // opened by the ♥ anytime
   const [streak, setStreak] = useState(0);
   const [daysTogether, setDaysTogether] = useState(0);
   const [verseEnabled, setVerseEnabled] = useState(false);
@@ -640,8 +641,9 @@ export default function App() {
           </ScrollView>
           )}
 
-          {/* One gentle question a day; a tap tells him how you are. */}
-          {moodAsk && (
+          {/* He asks once a day — and the ♥ beside the input opens
+              this any time you want to tell him how you are. */}
+          {(moodAsk || moodOpen) && (
             <View style={styles.moodRow}>
               <Text style={styles.moodQuestion}>How’s your heart today?</Text>
               <View style={styles.moodChips}>
@@ -651,6 +653,7 @@ export default function App() {
                     style={styles.moodChip}
                     onPress={() => {
                       setMoodAsk(false);
+                      setMoodOpen(false);
                       markMoodAsked();
                       send(m.message);
                     }}
@@ -665,6 +668,7 @@ export default function App() {
                 hitSlop={10}
                 onPress={() => {
                   setMoodAsk(false);
+                  setMoodOpen(false);
                   markMoodAsked();
                 }}
               >
@@ -674,6 +678,18 @@ export default function App() {
           )}
 
           <View style={styles.inputBar}>
+            <Pressable
+              onPress={() => {
+                markActive();
+                setMoodOpen((o) => !o);
+              }}
+              style={({ pressed }) => [
+                styles.heartButton,
+                pressed && styles.sendPressed,
+              ]}
+            >
+              <Text style={styles.heartText}>♥</Text>
+            </Pressable>
             <Pressable
               onPressIn={() => {
                 if (recording) stopTalking();
@@ -1025,10 +1041,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   moodRow: {
+    marginHorizontal: 10,
+    marginBottom: 4,
     paddingHorizontal: 14,
-    paddingTop: 6,
-    paddingBottom: 4,
+    paddingTop: 10,
+    paddingBottom: 9,
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(200,164,92,0.25)',
   },
   moodQuestion: {
     color: '#C8A45C',
@@ -1086,6 +1108,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(185, 150, 78, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  heartButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(200,164,92,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(200,164,92,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heartText: {
+    color: '#C8A45C',
+    fontSize: 19,
   },
   micButton: {
     width: 42,
