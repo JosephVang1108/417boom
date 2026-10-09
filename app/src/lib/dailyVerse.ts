@@ -2,10 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
 const ENABLED_KEY = 'daily_verse_enabled';
-const EVENING_KEY = 'evening_nudge_enabled';
+// v2: fresh key so every device returns to the default (evening
+// follows the morning switch) — the v1 flag could get stuck "no"
+// during testing and silently kill evening notifications.
+const EVENING_KEY = 'evening_nudge_enabled_v2';
 const DEVOTIONAL_DAY_KEY = 'devotional_last_day';
+const EVENING_DAY_KEY = 'evening_devotional_last_day';
 const HOUR = 8; // 8:00 AM local
 const EVENING_HOUR = 21; // 9:00 PM local
+const EVENING_FROM_HOUR = 20; // the evening check-in unlocks at 8 PM
 
 // Soft evening lines — a nightly invitation to close the day with him.
 const EVENING_LINES = [
@@ -45,11 +50,30 @@ const DAILY_VERSES: DailyVerse[] = [
   { ref: 'Psalm 34:18', text: 'Yahweh is near to those who have a broken heart.', meaning: 'When your heart breaks, God doesn’t step back — He moves closer. You are nearest to Him in the very place it hurts.' },
 ];
 
+// Evening verses (World English Bible) — rest, trust, and letting the
+// day go. The 9PM check-in draws from these.
+const EVENING_VERSES: DailyVerse[] = [
+  { ref: 'Psalm 4:8', text: 'In peace I will both lay myself down and sleep, for you alone, Yahweh, make me live in safety.', meaning: 'You can actually let go tonight. He stays on watch, so sleep isn’t giving up control — it’s handing it to Someone safer.' },
+  { ref: 'Psalm 121:4', text: 'Behold, he who keeps Israel will neither slumber nor sleep.', meaning: 'He stays awake so you don’t have to. Whatever you’re tempted to keep guarding tonight — He’s already guarding it.' },
+  { ref: 'Proverbs 3:24', text: 'When you lie down, you will not be afraid. Yes, you will lie down, and your sleep will be sweet.', meaning: 'Sweet sleep is a promise, not a luxury. Bring Him the day’s worries now, so they don’t follow you to bed.' },
+  { ref: 'Psalm 127:2', text: 'He gives sleep to his loved ones.', meaning: 'Rest isn’t something you earn by finishing everything — it’s something He gives, because He loves you. Receive it tonight.' },
+  { ref: 'Psalm 63:6', text: 'When I remember you on my bed, I meditate on you in the night watches.', meaning: 'The last thought of the day shapes the whole night. Let it be Him — not the inbox, not the worry, just Him.' },
+  { ref: 'Psalm 139:12', text: 'Even the darkness doesn’t hide from you… the darkness is like light to you.', meaning: 'Nothing about tonight is dark to Him — not the room, not the future, not the thing you haven’t told anyone. He sees, and He stays.' },
+  { ref: 'Psalm 42:8', text: 'In the night his song shall be with me: a prayer to the God of my life.', meaning: 'He doesn’t go quiet when the lights go out. His song keeps playing over you all night — fall asleep listening for it.' },
+];
+
 /** The verse + reflection for a given day (same pick as the 8AM
  * notification uses for that date), so past mornings stay reachable. */
 export function getDevotionalFor(date: Date): DailyVerse {
   return DAILY_VERSES[
     (date.getDate() + date.getMonth()) % DAILY_VERSES.length
+  ];
+}
+
+/** The evening verse + reflection for a given day. */
+export function getEveningDevotionalFor(date: Date): DailyVerse {
+  return EVENING_VERSES[
+    (date.getDate() + date.getMonth()) % EVENING_VERSES.length
   ];
 }
 
@@ -88,6 +112,24 @@ export async function markDevotionalSeen(): Promise<void> {
   } catch {
     // storage unavailable — it may show again next open, which is fine
   }
+}
+
+/** True in the evening (8 PM onward) when tonight's check-in hasn't
+ * been shown yet — the second Amen of the day. */
+export async function shouldShowEveningDevotional(): Promise<boolean> {
+  if (new Date().getHours() < EVENING_FROM_HOUR) return false;
+  try {
+    const last = await AsyncStorage.getItem(EVENING_DAY_KEY);
+    return last !== new Date().toDateString();
+  } catch {
+    return false;
+  }
+}
+
+export async function markEveningSeen(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(EVENING_DAY_KEY, new Date().toDateString());
+  } catch {}
 }
 
 Notifications.setNotificationHandler({
