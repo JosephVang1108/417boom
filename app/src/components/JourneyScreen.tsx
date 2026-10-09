@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { PREMIUM_UNLOCKED } from '../lib/config';
 import * as journal from '../lib/journal';
-import { RECORDED_SERMONS, RecordedSermon } from '../lib/media';
+import { RECORDED_SERMONS, RECORDED_STORIES, RecordedSermon } from '../lib/media';
 import {
   Badge,
   daysTogether,
@@ -257,6 +257,34 @@ export default function JourneyScreen({
               <Text style={styles.countLabel}>shared</Text>
             </View>
           </View>
+
+          {/* Recorded story tellings — he tells it to your face */}
+          <Text style={styles.sectionTitle}>Story time, recorded</Text>
+          {RECORDED_STORIES.map((s) => (
+            <Pressable
+              key={s.id}
+              style={styles.wordButton}
+              onPress={() => {
+                if (!s.free && !PREMIUM_UNLOCKED) {
+                  Alert.alert(
+                    'This telling is waiting for you',
+                    'The recorded tellings live in Jireh Premium. David & Goliath is yours anytime, free.'
+                  );
+                  return;
+                }
+                setTheater(s);
+              }}
+            >
+              <Medallion source={s.icon} size={26} fallback={s.emoji} />
+              <View style={styles.bibleButtonBody}>
+                <Text style={styles.wordButtonText}>{s.title}</Text>
+                <Text style={styles.wordButtonSub}>
+                  {s.tagline} · {s.minutes} min
+                </Text>
+              </View>
+              <Text style={styles.rowArrowDark}>▶</Text>
+            </Pressable>
+          ))}
 
           {/* Stories he can tell */}
           <Text style={styles.sectionTitle}>Stories he tells</Text>
