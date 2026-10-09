@@ -38,8 +38,8 @@ Apple Developer: **approved** (free + paid). Remaining:
   streaming hiccups
 - Widgets (lock screen verse + streak) and Routines — top retention levers,
   need the native build
-- Later in native build: real lip sync via streaming avatar (Simli/D-ID
-  class), camera-based head tracking
+- Later in native build: real lip sync via streaming avatar, camera-based
+  head tracking — see "Live lip-sync in chat" in §3 for the plan
 
 ## 3. Free vs Premium — DECIDED (Oct 2026), coded in `app/src/lib/tier.ts`
 
@@ -58,6 +58,21 @@ the real subscription check.
 - **Premium $9.99/mo / $59.99/yr:** unlimited conversations & prayers,
   full story shelf (adult + kids), the whole recorded video library,
   daily personal sermon, unlimited read-aloud, new releases first
+- **Flagship Premium roadmap item — "Watch him speak to you" (live
+  lip-sync in chat), post-launch once RevenueCat is live:**
+  - Every chat reply animates his mouth in real time with the voice.
+    Likely our single strongest Premium selling point.
+  - Architecture: self-hosted real-time lip-sync model (MuseTalk-class,
+    open source — free software) on a rented GPU server. Per-message
+    cloud lip-sync APIs are a non-starter: ~$0.80 and 30–60s render per
+    15s reply; thousands/day at modest scale.
+  - Cost: GPU server ~$300–600/mo running 24/7 + streaming engineering
+    (video to phones, concurrency). ~40–50 subscribers at $9.99/mo cover
+    it fully — build it when subscriptions turn on, not before.
+  - Quality note: real-time models soften the mouth slightly — fine in a
+    chat-sized video bubble, NOT acceptable for full-screen sermons;
+    sermons stay on Hedra. Re-survey open models at build time (the
+    space moves fast; MuseTalk may not be the best by then).
 - **IAP roadmap (post-launch, in priority order):**
   1. Gift Premium (offer codes — faith apps live on gifting)
   2. Founding Member lifetime unlock ~$149, capped at first 1,000
