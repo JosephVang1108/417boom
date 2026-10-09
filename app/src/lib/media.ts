@@ -1,12 +1,12 @@
 // Recorded media the app streams — real lip-synced renders of him
 // preaching in his own voice. The files live as GitHub release assets
-// (permanent, free, CDN-served); the "Archive media" workflow puts
-// them there after each render.
-//
-// Before the public launch this moves to real video hosting — these
-// URLs are fine for the family TestFlight.
-const MEDIA_BASE =
-  'https://github.com/JosephVang1108/417boom/releases/download/media';
+// (permanent, free); the "Archive media" workflow puts them there.
+// They stream THROUGH our server because GitHub labels the files
+// application/octet-stream, which the iPhone player refuses — the
+// server relays the bytes with an honest video/mp4 header.
+import { BACKEND_URL } from './config';
+
+const MEDIA_BASE = `${BACKEND_URL ?? ''}/media`;
 
 export interface RecordedSermon {
   id: string;

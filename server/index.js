@@ -58,7 +58,8 @@ app.use(express.json({ limit: '25mb' }));
 
 // --- auth -------------------------------------------------------------
 app.use((req, res, next) => {
-  if (req.path === '/health') return next();
+  // Recorded media is public content (no user data, no AI spend).
+  if (req.path === '/health' || req.path.startsWith('/media/')) return next();
   const token = req.headers['x-api-key'] || req.query.token;
   if (token !== APP_TOKEN) {
     return res.status(401).json({ error: 'invalid app token' });
@@ -67,6 +68,42 @@ app.use((req, res, next) => {
 });
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// --- Recorded media, proxied with honest headers ----------------------
+// The videos live as GitHub release assets, but GitHub serves them as
+// application/octet-stream behind a redirect, which the iPhone player
+// refuses to play. This route streams the same bytes with a proper
+// video/mp4 content type and Range support (required for scrubbing).
+const MEDIA_RELEASE =
+  'https://github.com/JosephVang1108/417boom/releases/download/media/';
+
+app.get('/media/:file', async (req, res) => {
+  const file = String(req.params.file || '');
+  if (!/^[a-z0-9][a-z0-9.-]*\.mp4$/.test(file)) {
+    return res.status(404).json({ error: 'not found' });
+  }
+  try {
+    const headers = {};
+    if (req.headers.range) headers.range = req.headers.range;
+    const upstream = await fetch(MEDIA_RELEASE + file, { headers });
+    if (!(upstream.status === 200 || upstream.status === 206)) {
+      return res
+        .status(upstream.status === 404 ? 404 : 502)
+        .json({ error: 'media unavailable' });
+    }
+    res.status(upstream.status);
+    res.set('content-type', 'video/mp4');
+    res.set('accept-ranges', 'bytes');
+    for (const h of ['content-length', 'content-range']) {
+      const v = upstream.headers.get(h);
+      if (v) res.set(h, v);
+    }
+    Readable.fromWeb(upstream.body).pipe(res);
+  } catch (err) {
+    console.error('media error', err);
+    if (!res.headersSent) res.status(502).json({ error: 'upstream failure' });
+  }
+});
 
 // --- Claude chat (Anthropic-wire-compatible) --------------------------
 app.post('/v1/messages', async (req, res) => {
