@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -9,6 +10,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import {
   DailyVerse,
@@ -46,6 +49,7 @@ export default function DailyDevotional({
   const [devotional, setDevotional] = useState<DailyVerse | null>(null);
   const [celebrating, setCelebrating] = useState(false);
 
+  const cardRef = useRef<View>(null);
   const enter = useRef(new Animated.Value(0)).current;
   const ringScale = useRef(new Animated.Value(0.25)).current;
   const ringOpacity = useRef(new Animated.Value(0)).current;
@@ -99,6 +103,19 @@ export default function DailyDevotional({
       }),
     ]).start();
     setTimeout(onDone, 2100);
+  };
+
+  // Capture the hidden verse card and hand it to the share sheet —
+  // every share is the app introducing itself to someone new.
+  const shareCard = async () => {
+    try {
+      const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/png' });
+      }
+    } catch {
+      // sharing unavailable — nothing to do
+    }
   };
 
   if (!devotional) return null;
@@ -172,6 +189,9 @@ export default function DailyDevotional({
               />
               <Text style={styles.amenText}>Amen</Text>
             </Pressable>
+            <Pressable onPress={shareCard} hitSlop={10}>
+              <Text style={styles.shareText}>Share this word 🕊</Text>
+            </Pressable>
             <Pressable onPress={onDone} hitSlop={10}>
               <Text style={styles.laterText}>Later</Text>
             </Pressable>
@@ -200,6 +220,28 @@ export default function DailyDevotional({
             </Animated.View>
           </View>
         )}
+
+        {/* The shareable verse card, rendered offscreen and captured
+            on demand. 360x640, shared at 3x = 1080x1920. */}
+        <View
+          ref={cardRef}
+          collapsable={false}
+          style={styles.shareCard}
+        >
+          <Image
+            source={require('../../assets/media/portrait.png')}
+            style={styles.shareCardPortrait}
+            resizeMode="cover"
+          />
+          <View style={styles.shareCardShade} />
+          <View style={styles.shareCardBody}>
+            <Text style={styles.shareCardVerse}>“{devotional.text}”</Text>
+            <Text style={styles.shareCardRef}>{devotional.ref}</Text>
+            <View style={styles.shareCardDivider} />
+            <Text style={styles.shareCardBrand}>JIREH</Text>
+            <Text style={styles.shareCardSub}>Bible & Prayer</Text>
+          </View>
+        </View>
       </View>
     </Modal>
   );
@@ -277,10 +319,80 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
   },
+  shareText: {
+    color: '#C8A45C',
+    fontSize: 14,
+    marginTop: 24,
+  },
   laterText: {
     color: '#6E6E66',
     fontSize: 14,
+    marginTop: 16,
+  },
+  shareCard: {
+    position: 'absolute',
+    top: 0,
+    left: -9999,
+    width: 360,
+    height: 640,
+    backgroundColor: '#000000',
+    overflow: 'hidden',
+  },
+  shareCardPortrait: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 400,
+    opacity: 0.85,
+  },
+  shareCardShade: {
+    position: 'absolute',
+    top: 200,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+  },
+  shareCardBody: {
+    position: 'absolute',
+    left: 28,
+    right: 28,
+    bottom: 44,
+    alignItems: 'center',
+  },
+  shareCardVerse: {
+    color: '#F0E6CE',
+    fontSize: 21,
+    lineHeight: 30,
+    textAlign: 'center',
+    fontFamily: SERIF,
+    fontStyle: 'italic',
+  },
+  shareCardRef: {
+    color: '#C8A45C',
+    fontSize: 13,
+    marginTop: 12,
+    letterSpacing: 1,
+  },
+  shareCardDivider: {
+    width: 40,
+    height: 1,
+    backgroundColor: 'rgba(185,150,78,0.6)',
     marginTop: 22,
+    marginBottom: 14,
+  },
+  shareCardBrand: {
+    color: '#C8A45C',
+    fontSize: 15,
+    letterSpacing: 5,
+    fontWeight: '600',
+  },
+  shareCardSub: {
+    color: '#8A8A80',
+    fontSize: 11,
+    marginTop: 3,
+    letterSpacing: 1,
   },
   celebrateWrap: {
     alignItems: 'center',

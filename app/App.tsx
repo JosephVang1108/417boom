@@ -42,6 +42,7 @@ import * as dailyVerse from './src/lib/dailyVerse';
 import * as journal from './src/lib/journal';
 import { touchStreak } from './src/lib/streak';
 import * as tier from './src/lib/tier';
+import { MOODS, markMoodAsked, shouldAskMood } from './src/lib/mood';
 import { rescheduleMissYou } from './src/lib/missYou';
 import * as stats from './src/lib/stats';
 import { MEDALLIONS } from './src/lib/stats';
@@ -91,6 +92,7 @@ export default function App() {
   const [devotionalVisible, setDevotionalVisible] = useState(false);
   const [devotionalDate, setDevotionalDate] = useState<Date | null>(null);
   const [eveningVisible, setEveningVisible] = useState(false);
+  const [moodAsk, setMoodAsk] = useState(false);
   const [streak, setStreak] = useState(0);
   const [daysTogether, setDaysTogether] = useState(0);
   const [verseEnabled, setVerseEnabled] = useState(false);
@@ -216,6 +218,7 @@ export default function App() {
       stats.recordOpen(s).then(() => setDaysTogether(stats.daysTogether()));
     });
     journal.loadJournal();
+    shouldAskMood().then(setMoodAsk);
     dailyVerse.isDailyVerseEnabled().then(async (on) => {
       setVerseEnabled(on);
       const eve = await dailyVerse.isEveningEnabled();
@@ -637,6 +640,39 @@ export default function App() {
           </ScrollView>
           )}
 
+          {/* One gentle question a day; a tap tells him how you are. */}
+          {moodAsk && (
+            <View style={styles.moodRow}>
+              <Text style={styles.moodQuestion}>How’s your heart today?</Text>
+              <View style={styles.moodChips}>
+                {MOODS.map((m) => (
+                  <Pressable
+                    key={m.label}
+                    style={styles.moodChip}
+                    onPress={() => {
+                      setMoodAsk(false);
+                      markMoodAsked();
+                      send(m.message);
+                    }}
+                  >
+                    <Text style={styles.moodChipText}>
+                      {m.emoji} {m.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable
+                hitSlop={10}
+                onPress={() => {
+                  setMoodAsk(false);
+                  markMoodAsked();
+                }}
+              >
+                <Text style={styles.moodSkip}>not now</Text>
+              </Pressable>
+            </View>
+          )}
+
           <View style={styles.inputBar}>
             <Pressable
               onPressIn={() => {
@@ -987,6 +1023,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 8,
     fontWeight: '600',
+  },
+  moodRow: {
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    paddingBottom: 4,
+    alignItems: 'center',
+  },
+  moodQuestion: {
+    color: '#C8A45C',
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  moodChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  moodChip: {
+    backgroundColor: 'rgba(200,164,92,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(200,164,92,0.45)',
+    borderRadius: 18,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+  },
+  moodChipText: {
+    color: '#E8DDC0',
+    fontSize: 13,
+  },
+  moodSkip: {
+    color: '#6E6E66',
+    fontSize: 12,
+    marginTop: 7,
   },
   inputBar: {
     flexDirection: 'row',
