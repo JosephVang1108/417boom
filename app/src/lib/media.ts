@@ -31,3 +31,26 @@ export const RECORDED_SERMONS: RecordedSermon[] = [
     free: true,
   },
 ];
+
+/** Recorded story tellings — he tells it to your face. */
+export const RECORDED_STORIES: RecordedSermon[] = [
+  {
+    id: 'david-goliath-adult',
+    title: 'David & Goliath',
+    tagline: 'The full telling — he was there',
+    minutes: 6,
+    url: `${MEDIA_BASE}/story-david-goliath-adult.mp4`,
+    icon: require('../../assets/media/s-david.jpg'),
+    emoji: '🪨',
+    free: true,
+  },
+  {
+    id: 'david-goliath-kids',
+    title: 'David & Goliath for Kids',
+    tagline: 'A cozy bedtime telling for little ones',
+    minutes: 5,
+    url: `${MEDIA_BASE}/story-david-goliath-kids.mp4`,
+    icon: require('../../assets/media/s-david.jpg'),
+    emoji: '🛏️',
+  },
+];
