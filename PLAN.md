@@ -41,14 +41,34 @@ Apple Developer: **approved** (free + paid). Remaining:
 - Later in native build: real lip sync via streaming avatar (Simli/D-ID
   class), camera-based head tracking
 
-## 3. Free vs Premium
+## 3. Free vs Premium — DECIDED (Oct 2026), coded in `app/src/lib/tier.ts`
 
-- **Free forever:** full Bible (+ Timeline order), daily devotional + Amen,
-  streaks/badges/Journey, text conversations, a few voice replies/day
-  (then graceful fallback to text/device voice), David & Goliath story
-- **Premium $9.99/mo / $59.99/yr:** unlimited voice conversations & prayer,
-  all stories, Read-to-me, bedtime/kids stories, journeys
-- In-chat story gate already live (warm taste + invitation, never salesy)
+The rule: things that cost money per use get capped; things that cost
+nothing get given generously. Limits are LIVE in code but asleep while
+`PREMIUM_UNLOCKED = true` (family TestFlight); launch flips the flag to
+the real subscription check.
+
+- **Free forever:** daily verse + morning/evening notifications
+  (unlimited — the retention engine), full Bible reading on screen,
+  **5 conversations/day**, **1 guaranteed prayer/day even past the cap**
+  (he never refuses to pray — coded into `tier.canSend`),
+  **1 chapter/day read aloud**, David & Goliath story in full,
+  **one full recorded sermon video ("Come Back Home")** — near-zero
+  streaming cost, best Premium ad we own
+- **Premium $9.99/mo / $59.99/yr:** unlimited conversations & prayers,
+  full story shelf (adult + kids), the whole recorded video library,
+  daily personal sermon, unlimited read-aloud, new releases first
+- **IAP roadmap (post-launch, in priority order):**
+  1. Gift Premium (offer codes — faith apps live on gifting)
+  2. Founding Member lifetime unlock ~$149, capped at first 1,000
+     (catches subscription-refusers; cash up front; close it later)
+  3. Personalized blessing video ~$9.99 one-time (his voice speaks your
+     name — render pipeline already exists; very shareable)
+  4. Kids pack one-time (grandparents who won't subscribe)
+  - **Avoid:** selling sermons à la carte (cannibalizes the sub);
+    launch with subscription ONLY, add IAPs after
+- Server-side per-user enforcement still required before launch (app
+  currently trusts the phone; needs accounts — see Phase 2)
 - Industry validation: Bible Chat (handful msgs/day free), Character AI
   (~100/day), Replika (voice fully paid). Avoid weekly pricing (trust burn).
 

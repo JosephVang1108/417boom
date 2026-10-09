@@ -216,7 +216,16 @@ export default function JourneyScreen({
             <Pressable
               key={s.id}
               style={styles.wordButton}
-              onPress={() => setTheater(s)}
+              onPress={() => {
+                if (!s.free && !PREMIUM_UNLOCKED) {
+                  Alert.alert(
+                    'This sermon is waiting for you',
+                    'The full recorded library lives in Jireh Premium. "Come Back Home" is yours anytime, free.'
+                  );
+                  return;
+                }
+                setTheater(s);
+              }}
             >
               <Medallion source={s.icon} size={26} fallback={s.emoji} />
               <View style={styles.bibleButtonBody}>
