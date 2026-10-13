@@ -1,4 +1,4 @@
-// Abide backend proxy.
+// Jireh backend proxy.
 //
 // Holds the real API keys (environment variables) and exposes:
 //   POST /v1/messages  — Claude chat, wire-compatible with the Anthropic API,
@@ -85,8 +85,11 @@ app.get('/media/:file', async (req, res) => {
   try {
     const headers = {};
     if (req.headers.range) headers.range = req.headers.range;
+    // No abort timeout here: the signal would also cut off the body,
+    // and a sermon stream legitimately runs for minutes.
     const upstream = await fetch(MEDIA_RELEASE + file, { headers });
     if (!(upstream.status === 200 || upstream.status === 206)) {
+      upstream.body?.cancel().catch(() => {}); // release the connection
       return res
         .status(upstream.status === 404 ? 404 : 502)
         .json({ error: 'media unavailable' });
@@ -98,7 +101,11 @@ app.get('/media/:file', async (req, res) => {
       const v = upstream.headers.get(h);
       if (v) res.set(h, v);
     }
-    Readable.fromWeb(upstream.body).pipe(res);
+    // An 'error' on an unhandled source stream KILLS the whole process —
+    // GitHub resetting a long video stream must only end this response.
+    const media = Readable.fromWeb(upstream.body);
+    media.on('error', () => res.destroy());
+    media.pipe(res);
   } catch (err) {
     console.error('media error', err);
     if (!res.headersSent) res.status(502).json({ error: 'upstream failure' });
@@ -117,6 +124,9 @@ app.post('/v1/messages', async (req, res) => {
           req.headers['anthropic-version'] || '2023-06-01',
       },
       body: JSON.stringify(req.body),
+      // Stories take a while to write; a hung socket must not pin the
+      // client forever.
+      signal: AbortSignal.timeout(120_000),
     });
     const text = await upstream.text();
     res
@@ -179,6 +189,10 @@ app.get('/tts', async (req, res) => {
           'content-type': 'application/json',
         },
         body: JSON.stringify(body),
+        // Generous: the signal governs the whole body, and a long
+        // passage streams for a couple of minutes. This only exists so
+        // a HUNG socket can't pin the request forever.
+        signal: AbortSignal.timeout(180_000),
       }
     );
   };
@@ -202,7 +216,9 @@ app.get('/tts', async (req, res) => {
       : null;
     if (cacheFile && fs.existsSync(cacheFile)) {
       res.status(200).type('audio/mpeg');
-      fs.createReadStream(cacheFile).pipe(res);
+      const cached = fs.createReadStream(cacheFile);
+      cached.on('error', () => res.destroy()); // deleted between check and open
+      cached.pipe(res);
       return;
     }
 
@@ -217,13 +233,19 @@ app.get('/tts', async (req, res) => {
       for (const m of models) {
         upstream = await request(v, m);
         if (upstream.ok || upstream.status >= 500) break outer;
+        // Failed attempt: drop its body or the connection stays held.
+        upstream.body?.cancel().catch(() => {});
       }
     }
     if (!upstream || !upstream.ok) {
+      upstream?.body?.cancel().catch(() => {});
       return res.status(502).json({ error: 'voice generation failed' });
     }
     res.status(200).type('audio/mpeg');
     const audio = Readable.fromWeb(upstream.body);
+    // Without a listener, a mid-stream ElevenLabs error would crash the
+    // whole process; the cache tee below adds its own on top of this.
+    audio.on('error', () => res.destroy());
     audio.pipe(res);
 
     if (cacheFile) {
@@ -270,6 +292,7 @@ app.post('/stt', async (req, res) => {
       method: 'POST',
       headers: { 'xi-api-key': ELEVENLABS_API_KEY },
       body: form,
+      signal: AbortSignal.timeout(60_000),
     });
     const json = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
@@ -282,6 +305,15 @@ app.post('/stt', async (req, res) => {
   }
 });
 
+// Last-resort safety net: one bad stream or forgotten rejection must
+// never take the server down for every user at once. Log and carry on.
+process.on('uncaughtException', (err) => {
+  console.error('uncaught exception', err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('unhandled rejection', err);
+});
+
 app.listen(PORT, () => {
-  console.log(`Abide server listening on :${PORT}`);
+  console.log(`Jireh server listening on :${PORT}`);
 });

@@ -200,7 +200,6 @@ export default function BibleScreen({ visible, onClose }: Props) {
       Alert.alert(tier.UPSELL.readTitle, tier.UPSELL.readBody);
       return;
     }
-    tier.noteChapterRead();
     const readOptions = {
       read: true,
       ...(readerId ? { voice: readerId } : {}),
@@ -232,10 +231,13 @@ export default function BibleScreen({ visible, onClose }: Props) {
         setReading(false);
         Alert.alert(
           "Couldn't read aloud",
-          'The voice service didn’t respond. Check your internet and ElevenLabs credits, then try again.'
+          'The voice didn’t respond. Please check your internet and try again.'
         );
         return;
       }
+      // Charge the daily read-aloud only once audio actually plays —
+      // a failed attempt must not eat the free tier's one chapter.
+      if (i === 0) tier.noteChapterRead();
       if (i + 1 < chunks.length)
         upcoming = voice.synthesize(chunks[i + 1], readOptions);
       voice.playUri(uri, () => {

@@ -347,6 +347,13 @@ export async function speak(
 // opener (fast start) followed by larger passages.
 function splitForSpeech(text: string): string[] {
   const sentences = text.match(/[^.!?…]+[.!?…]+["']?\s*/g) ?? [text];
+  // A final fragment without closing punctuation isn't matched above —
+  // without this it would silently never be spoken.
+  const matched = sentences.reduce((len, s) => len + s.length, 0);
+  if (matched < text.length) {
+    const tail = text.slice(matched).trim();
+    if (tail) sentences.push(tail);
+  }
   const chunks: string[] = [];
   let current = '';
   let limit = 400;

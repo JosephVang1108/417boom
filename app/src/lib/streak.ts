@@ -14,7 +14,12 @@ function dayString(d: Date): string {
 export async function touchStreak(): Promise<number> {
   try {
     const today = dayString(new Date());
-    const yesterday = dayString(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    // Yesterday via calendar math, not minus-24h: on the 23-hour day
+    // after DST starts, subtracting a day of milliseconds just after
+    // midnight lands two calendar days back and resets the streak.
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    const yesterday = dayString(y);
     const [lastDay, countRaw] = await Promise.all([
       AsyncStorage.getItem(LAST_DAY_KEY),
       AsyncStorage.getItem(COUNT_KEY),

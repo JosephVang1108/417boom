@@ -62,19 +62,26 @@ const EVENING_VERSES: DailyVerse[] = [
   { ref: 'Psalm 42:8', text: 'In the night his song shall be with me: a prayer to the God of my life.', meaning: 'He doesn’t go quiet when the lights go out. His song keeps playing over you all night — fall asleep listening for it.' },
 ];
 
+// Day-to-verse formula, shared by the in-app devotionals and the
+// scheduled notifications so they always agree. `getMonth() * 31`
+// (not `+ getMonth()`) so the pick never repeats across a month
+// boundary: with the plain sum, the 30th and the next month's 1st
+// landed on the same verse four times a year.
+function verseIndexFor(date: Date, length: number): number {
+  // The year term keeps Dec 31 → Jan 1 from repeating, and rotates
+  // which verse lands on which date from one year to the next.
+  return (date.getDate() + date.getMonth() * 31 + date.getFullYear()) % length;
+}
+
 /** The verse + reflection for a given day (same pick as the 8AM
  * notification uses for that date), so past mornings stay reachable. */
 export function getDevotionalFor(date: Date): DailyVerse {
-  return DAILY_VERSES[
-    (date.getDate() + date.getMonth()) % DAILY_VERSES.length
-  ];
+  return DAILY_VERSES[verseIndexFor(date, DAILY_VERSES.length)];
 }
 
 /** The evening verse + reflection for a given day. */
 export function getEveningDevotionalFor(date: Date): DailyVerse {
-  return EVENING_VERSES[
-    (date.getDate() + date.getMonth()) % EVENING_VERSES.length
-  ];
+  return EVENING_VERSES[verseIndexFor(date, EVENING_VERSES.length)];
 }
 
 /** Today's verse + reflection. */
@@ -207,8 +214,7 @@ export async function refreshSchedule(): Promise<void> {
       fireAt.setDate(now.getDate() + i);
       fireAt.setHours(HOUR, 0, 0, 0);
       if (morning && fireAt > now) {
-        const verse =
-          DAILY_VERSES[(fireAt.getDate() + fireAt.getMonth()) % DAILY_VERSES.length];
+        const verse = DAILY_VERSES[verseIndexFor(fireAt, DAILY_VERSES.length)];
         await Notifications.scheduleNotificationAsync({
           content: {
             title: verse.ref,
