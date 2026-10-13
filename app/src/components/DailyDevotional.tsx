@@ -29,6 +29,10 @@ interface Props {
   /** 'evening' closes the day: dusk glow, rest verse, same Amen. */
   variant?: 'morning' | 'evening';
   onDone: () => void;
+  /** "Later": close without finishing, so the card can return (the
+   * evening check-in comes back on the next open that night). Falls
+   * back to onDone when not given. */
+  onLater?: () => void;
 }
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' });
@@ -44,6 +48,7 @@ export default function DailyDevotional({
   forDate,
   variant = 'morning',
   onDone,
+  onLater,
 }: Props) {
   const evening = variant === 'evening';
   const [devotional, setDevotional] = useState<DailyVerse | null>(null);
@@ -192,7 +197,7 @@ export default function DailyDevotional({
             <Pressable onPress={shareCard} hitSlop={10}>
               <Text style={styles.shareText}>Share this word 🕊</Text>
             </Pressable>
-            <Pressable onPress={onDone} hitSlop={10}>
+            <Pressable onPress={onLater ?? onDone} hitSlop={10}>
               <Text style={styles.laterText}>Later</Text>
             </Pressable>
           </Animated.View>

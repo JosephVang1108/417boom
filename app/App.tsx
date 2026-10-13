@@ -863,6 +863,13 @@ export default function App() {
               setEveningVisible(false);
               markActive();
             }}
+            onLater={() => {
+              // Not seen yet: the night check-in returns on the next
+              // open this evening (and the 9 PM notification tap has
+              // something to show).
+              setEveningVisible(false);
+              markActive();
+            }}
           />
 
           <JourneyScreen
