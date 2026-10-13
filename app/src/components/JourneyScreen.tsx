@@ -307,7 +307,7 @@ export default function JourneyScreen({
                     (s.free || PREMIUM_UNLOCKED) && styles.storyTagFree,
                   ]}
                 >
-                  {PREMIUM_UNLOCKED ? 'PREMIUM ✦' : s.free ? 'FREE' : '🔒 PREMIUM'}
+                  {s.free ? 'FREE' : PREMIUM_UNLOCKED ? 'PREMIUM ✦' : '🔒 PREMIUM'}
                 </Text>
               </Pressable>
             ))}

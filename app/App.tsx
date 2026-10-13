@@ -36,7 +36,7 @@ import {
   resetConversation,
   setApiKey,
 } from './src/lib/ai';
-import { cleanForDisplay, hasProfanity, hasSlur } from './src/lib/clean';
+import { cleanForDisplay, hasSlur } from './src/lib/clean';
 import { backendConfigured } from './src/lib/config';
 import * as dailyVerse from './src/lib/dailyVerse';
 import * as journal from './src/lib/journal';
@@ -143,10 +143,28 @@ export default function App() {
   // reply read as "it said something else out loud".
   const latestExchangeId = useRef(0);
 
-  // Repeated profanity or slurs: after the third strike he stops and
-  // prays over them — a long prayer about the hate and for peace —
-  // then the count starts fresh.
+  // Repeated slurs: after the third strike he stops and prays over
+  // them — a long prayer about the hate and for peace — then the
+  // count starts fresh. (Plain profanity never counts: someone hurting
+  // who swears gets met with grace, exactly as the system prompt says.)
   const hateStrikes = useRef(0);
+
+  // The reply handler runs seconds after send() starts; reading voiceOn
+  // from the closure would ignore a mute tapped while the AI thinks.
+  const voiceOnRef = useRef(true);
+  voiceOnRef.current = voiceOn;
+
+  // Free tier: after a prayer ask, his "what shall we bring?" needs an
+  // answer — keep the gate open for those follow-ups past the cap.
+  const prayerFollowups = useRef(0);
+
+  // Two taps of ➤ in one frame (or tap + keyboard submit) both read the
+  // not-yet-cleared input; drop the identical immediate duplicate.
+  const lastSend = useRef({ text: '', at: 0 });
+
+  // stopTalking can fire twice in one render (auto-stop + manual ■);
+  // React state is too slow to guard that race.
+  const stoppingRef = useRef(false);
 
   const hatePrayerFallback = (): GuideResponse => {
     const name = profile.getName();
@@ -366,6 +384,7 @@ export default function App() {
     }
     voice.stop();
     setSpeaking(false);
+    setPraying(false); // opening the mic mid-prayer must lift his head too
     heardSpeech.current = false;
     lastLoudAt.current = 0;
     micOpenedAt.current = Date.now();
@@ -395,7 +414,10 @@ export default function App() {
   }, [recorderState.metering, recording]);
 
   const stopTalking = async () => {
-    if (!recording) return;
+    // Ref guard: the metering auto-stop and a manual ■ tap can land in
+    // the same render, where both still see recording === true.
+    if (!recording || stoppingRef.current) return;
+    stoppingRef.current = true;
     setRecording(false);
     setTranscribing(true);
     try {
@@ -417,21 +439,30 @@ export default function App() {
         );
       }
       // Mic closed without speech — no alert, they just changed their mind.
+    } catch {
+      // Recorder refused to stop cleanly — nothing to transcribe.
     } finally {
+      stoppingRef.current = false;
       setTranscribing(false);
       setListening(false);
     }
   };
 
-  const send = async (spokenQuestion?: string) => {
+  const send = async (spokenQuestion?: string): Promise<boolean> => {
     markActive();
     const question = (spokenQuestion ?? input).trim();
-    if (!question) return;
+    if (!question) return false;
+    const now = Date.now();
+    if (question === lastSend.current.text && now - lastSend.current.at < 1500) {
+      return false; // double-tap of ➤ / tap + submit in the same breath
+    }
+    lastSend.current = { text: question, at: now };
     // Free-tier meter (asleep while PREMIUM_UNLOCKED). Prayer always
-    // gets through at least once a day.
-    if (!tier.canSend(question)) {
+    // gets through at least once a day — including the follow-up where
+    // they tell him WHAT to pray for.
+    if (!tier.canSend(question, { prayerFollowup: prayerFollowups.current > 0 })) {
       Alert.alert(tier.UPSELL.messagesTitle, tier.UPSELL.messagesBody);
-      return;
+      return false;
     }
     const id = nextId.current++;
     latestExchangeId.current = id;
@@ -442,9 +473,10 @@ export default function App() {
     setInput('');
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
 
-    // Strikes: slurs and plain profanity both count — the third one
-    // triggers the prayer intervention.
-    if (hasSlur(question) || hasProfanity(question)) hateStrikes.current += 1;
+    // Strikes: only slurs count — the third one triggers the prayer
+    // intervention. Plain profanity from someone hurting gets grace,
+    // never a lecture (matching the system prompt).
+    if (hasSlur(question)) hateStrikes.current += 1;
     const needHatePrayer = hateStrikes.current >= 3;
 
     // Prefer Claude when a key is set; fall back to the offline verse engine.
@@ -461,14 +493,26 @@ export default function App() {
 
     setHistory((h) => h.map((ex) => (ex.id === id ? { ...ex, response } : ex)));
     tier.noteMessage(!!response.isPrayer);
+    // Track the prayer conversation: a prayer ask that gets a question
+    // back ("what shall we bring?") keeps the free-tier gate open for
+    // the next couple of replies, until the prayer itself is prayed.
+    if (response.isPrayer) {
+      prayerFollowups.current = 0;
+    } else if (tier.looksLikePrayer(question)) {
+      prayerFollowups.current = 2;
+    } else if (prayerFollowups.current > 0) {
+      prayerFollowups.current -= 1;
+    }
     if (response.isPrayer && !needHatePrayer) {
       journal.addPrayer(shown);
       stats.bump('prayers');
     }
     if (response.isStory) stats.bump('stories');
     // Speak only if this is still the newest exchange — a reply that
-    // lost the race keeps its card but stays silent.
-    if (voiceOn && id === latestExchangeId.current) speak(response);
+    // lost the race keeps its card but stays silent. (Read the ref, not
+    // the closure: they may have muted while the AI was thinking.)
+    if (voiceOnRef.current && id === latestExchangeId.current) speak(response);
+    return true;
   };
 
   const saveKey = async (key: string) => {
@@ -651,11 +695,13 @@ export default function App() {
                   <Pressable
                     key={m.label}
                     style={styles.moodChip}
-                    onPress={() => {
+                    onPress={async () => {
                       setMoodAsk(false);
                       setMoodOpen(false);
-                      markMoodAsked();
-                      send(m.message);
+                      // Only burn today's ask if the message actually
+                      // went through (the free-tier gate can refuse it).
+                      if (await send(m.message)) markMoodAsked();
+                      else setMoodAsk(true);
                     }}
                   >
                     <Text style={styles.moodChipText}>

@@ -17,6 +17,25 @@ const SILENT_MP3 = Buffer.from(
 
 function cannedReply(userText) {
   const t = (userText || '').toLowerCase();
+  // Two-step prayer: a bare ask gets his clarifying question first
+  // (is_prayer FALSE — mirrors the real system prompt), and the
+  // detail answer (no prayer keyword!) gets the prayer.
+  if (t.includes('pray') && t.length < 40 && !t.includes('for my')) {
+    return {
+      reply: 'Of course. What would you like us to bring before the Father?',
+      verse: null,
+      is_prayer: false,
+      is_story: false,
+    };
+  }
+  if (t.includes('surgery') || t.includes('operation')) {
+    return {
+      reply: 'Father… be close in that operating room tomorrow. … Steady every hand, and hold this family in peace. Amen.',
+      verse: null,
+      is_prayer: true,
+      is_story: false,
+    };
+  }
   if (t.includes('pray')) {
     return {
       reply:

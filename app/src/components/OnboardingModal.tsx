@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -48,6 +48,18 @@ export default function OnboardingModal({ visible, onComplete }: Props) {
   const [seasons, setSeasons] = useState<string[]>([]);
   const [seeking, setSeeking] = useState<string[]>([]);
   const [about, setAbout] = useState('');
+
+  // Start fresh each time it opens — "Replay the welcome" from settings
+  // would otherwise resume at the last step with stale answers.
+  useEffect(() => {
+    if (visible) {
+      setStep(0);
+      setName('');
+      setSeasons([]);
+      setSeeking([]);
+      setAbout('');
+    }
+  }, [visible]);
 
   const toggle = (
     value: string,

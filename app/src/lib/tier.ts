@@ -56,7 +56,7 @@ async function save(): Promise<void> {
 
 const PRAYER_WORDS = ['pray', 'prayer', 'praying'];
 
-function looksLikePrayer(question: string): boolean {
+export function looksLikePrayer(question: string): boolean {
   const text = ` ${question.toLowerCase()} `;
   return PRAYER_WORDS.some((w) => text.includes(` ${w}`));
 }
@@ -65,12 +65,22 @@ function looksLikePrayer(question: string): boolean {
  * May this message be sent? Past the daily cap, a prayer request still
  * goes through if today's guaranteed prayer hasn't been used — he never
  * refuses to pray with someone.
+ *
+ * `prayerFollowup` keeps that door open for the replies right after a
+ * prayer ask: he asks "what shall we bring?", and the answer ("my
+ * mom's surgery") has no prayer word in it — it must not be refused.
  */
-export function canSend(question: string): boolean {
+export function canSend(
+  question: string,
+  opts: { prayerFollowup?: boolean } = {}
+): boolean {
   if (PREMIUM_UNLOCKED) return true;
   rollover();
   if (counts.messages < FREE_LIMITS.messages) return true;
-  return looksLikePrayer(question) && counts.prayers < FREE_LIMITS.prayers;
+  return (
+    (looksLikePrayer(question) || !!opts.prayerFollowup) &&
+    counts.prayers < FREE_LIMITS.prayers
+  );
 }
 
 export function canReadChapter(): boolean {
