@@ -54,9 +54,10 @@ if (!APP_TOKEN || !ANTHROPIC_API_KEY || !ELEVENLABS_API_KEY) {
 const FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb'; // "Brian"
 
 const app = express();
-app.use(express.json({ limit: '25mb' }));
 
 // --- auth -------------------------------------------------------------
+// BEFORE the body parser: an unauthenticated request must be rejected
+// from its headers alone, not after we buffered and parsed its body.
 app.use((req, res, next) => {
   // Recorded media is public content (no user data, no AI spend).
   if (req.path === '/health' || req.path.startsWith('/media/')) return next();
@@ -66,6 +67,11 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Only /stt carries real payload (base64 voice recordings); everything
+// else is small JSON.
+app.use('/stt', express.json({ limit: '25mb' }));
+app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
@@ -254,11 +260,19 @@ app.get('/tts', async (req, res) => {
       const partFile = cacheFile + '.part';
       try {
         const sink = fs.createWriteStream(partFile, { flags: 'wx' });
+        // 'wx' rejects an existing part file ASYNCHRONOUSLY (an 'error'
+        // event, not a throw) — so only unlink once we know the file is
+        // OURS, or a second simultaneous listener would delete the
+        // first one's in-progress write.
+        let owned = false;
+        sink.on('open', () => {
+          owned = true;
+        });
         let failed = false;
         const scrap = () => {
           failed = true;
           sink.destroy();
-          fs.promises.unlink(partFile).catch(() => {});
+          if (owned) fs.promises.unlink(partFile).catch(() => {});
         };
         sink.on('error', scrap);
         audio.on('error', scrap);

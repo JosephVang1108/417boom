@@ -92,6 +92,9 @@ the real subscription check.
 - Anthropic: **prepaid credits** — hard ceiling, auto-reload off/capped
 - ElevenLabs: fixed plan quota, usage-overage billing **OFF**
 - Render: flat instance
+- Before adding a persistent disk: cap/evict the read-aloud voice cache
+  (it grows ~1MB per minute of audio per voice, forever, with no
+  eviction — fine while ephemeral, a slow-filling disk once persistent)
 - App degrades gracefully (device voice / offline guide) instead of billing
 - Worst-case monthly exposure ≈ prepaid + plans (~$150–225), chosen upfront
 - Cost levers when scaling: cheaper model for chat (test vs Opus), prompt

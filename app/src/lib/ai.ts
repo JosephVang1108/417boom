@@ -236,9 +236,11 @@ export async function aiRespond(
     };
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError && !backendConfigured()) {
-      // Bad key — clear it so the UI can prompt again.
+      // Bad key — clear it from memory AND storage, or next launch
+      // reloads the rejected key and burns a failed call every session.
       cachedKey = null;
       client = null;
+      SecureStore.deleteItemAsync(KEY_STORAGE).catch(() => {});
     }
     return null;
   }
