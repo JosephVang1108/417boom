@@ -1,0 +1,45 @@
+# EAS builds only need the app/ folder. Everything else in this repo —
+# content masters, server code, tooling, and especially any videos or
+# audio downloaded into the working folder on a local machine — must
+# stay out of the build archive (the 2 GB upload limit is real: a
+# working folder full of sermon masters once hit 12.2 GB).
+#
+# NOTE: when .easignore exists, EAS ignores .gitignore entirely, so the
+# app's ignore rules are repeated below.
+
+# Everything at the root…
+/*
+# …except the app itself
+!/app
+
+# From app/.gitignore — dependencies, caches, native folders, secrets
+app/node_modules/
+app/.expo/
+app/dist/
+app/web-build/
+app/expo-env.d.ts
+app/.kotlin/
+app/*.orig.*
+app/*.jks
+app/*.p8
+app/*.p12
+app/*.key
+app/*.mobileprovision
+app/.metro-health-check*
+app/npm-debug.*
+app/yarn-debug.*
+app/yarn-error.*
+app/.DS_Store
+app/*.pem
+app/.env*.local
+app/*.tsbuildinfo
+app/ios/
+app/android/
+
+# Local media that might get saved inside app/ by accident — but keep
+# the bundled app assets (app/assets/**) untouched.
+app/*.mp4
+app/*.mp3
+app/*.mov
+app/*.zip
+app/*.ipa
