@@ -18,6 +18,7 @@ import {
   getDevotionalFor,
   getEveningDevotionalFor,
 } from '../lib/dailyVerse';
+import * as stats from '../lib/stats';
 import { MEDALLIONS } from '../lib/stats';
 import Medallion from './Medallion';
 
@@ -117,6 +118,7 @@ export default function DailyDevotional({
       const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { mimeType: 'image/png' });
+        stats.bump('shares'); // the Lamp on a Stand badges count this too
       }
     } catch {
       // sharing unavailable — nothing to do

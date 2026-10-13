@@ -170,12 +170,20 @@ export default function BibleScreen({ visible, onClose }: Props) {
       const pos = { book: book.name, chapter };
       setLastPos(pos);
       AsyncStorage.setItem(LAST_POS_KEY, JSON.stringify(pos)).catch(() => {});
+      // Staleness guard: a slow fetch must not overwrite the chapter
+      // the reader has already moved on to (header would say Genesis 2
+      // while the body — and read-aloud — delivered Genesis 1).
+      let stale = false;
       fetchChapter(book.name, chapter).then((v) => {
+        if (stale) return;
         setVerses(v);
         setFailed(!v);
         setLoading(false);
         if (v) stats.bump('chapters'); // counts toward Journey badges
       });
+      return () => {
+        stale = true;
+      };
     }
   }, [book, chapter]);
 

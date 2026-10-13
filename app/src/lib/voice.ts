@@ -319,7 +319,13 @@ export async function speak(
         const uri = await upcoming;
         if (myGen !== generation) return;
         if (!uri) {
-          await speakDevice(text, onDone);
+          // One chunk failed mid-story: continue from HERE in the
+          // device voice — never restart a story they already heard.
+          // (Guard onDone: Speech.stop() fires onStopped late, which
+          // would mark the NEXT reply as done.)
+          await speakDevice(chunks.slice(i).join(''), () => {
+            if (myGen === generation) onDone();
+          });
           return;
         }
         if (i + 1 < chunks.length) upcoming = synthesize(chunks[i + 1], options);
@@ -340,20 +346,32 @@ export async function speak(
       return;
     }
   }
-  await speakDevice(text, onDone);
+  // Guard the device path's onDone: Speech.stop() (from a NEWER reply
+  // taking over) fires onStopped asynchronously, which would otherwise
+  // reset the speaking/praying UI while the new reply is mid-sentence.
+  await speakDevice(text, () => {
+    if (myGen === generation) onDone();
+  });
 }
 
 // Split long text into speech chunks at sentence boundaries: a short
 // opener (fast start) followed by larger passages.
 function splitForSpeech(text: string): string[] {
-  const sentences = text.match(/[^.!?…]+[.!?…]+["']?\s*/g) ?? [text];
+  // Track the END INDEX of the last match, not the sum of lengths:
+  // standalone "…" pauses between sentences are skipped by the regex,
+  // so the matches aren't contiguous — a length sum lands short and
+  // slicing there appends a garbled duplicate of the ending.
+  const sentences: string[] = [];
+  let end = 0;
+  for (const m of text.matchAll(/[^.!?…]+[.!?…]+["']?\s*/g)) {
+    sentences.push(m[0]);
+    end = (m.index ?? 0) + m[0].length;
+  }
+  if (sentences.length === 0) return [text];
   // A final fragment without closing punctuation isn't matched above —
   // without this it would silently never be spoken.
-  const matched = sentences.reduce((len, s) => len + s.length, 0);
-  if (matched < text.length) {
-    const tail = text.slice(matched).trim();
-    if (tail) sentences.push(tail);
-  }
+  const tail = text.slice(end).trim();
+  if (tail) sentences.push(tail);
   const chunks: string[] = [];
   let current = '';
   let limit = 400;

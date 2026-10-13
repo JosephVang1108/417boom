@@ -154,6 +154,11 @@ export default function App() {
   const voiceOnRef = useRef(true);
   voiceOnRef.current = voiceOn;
 
+  // Mirrors onboardingVisible for the AppState listener (mounted once,
+  // so reading the state directly would always see the first render).
+  const onboardingRef = useRef(false);
+  onboardingRef.current = onboardingVisible;
+
   // Free tier: after a prayer ask, his "what shall we bring?" needs an
   // answer — keep the gate open for those follow-ups past the cap.
   const prayerFollowups = useRef(0);
@@ -251,12 +256,14 @@ export default function App() {
 
   // Coming back from the background (e.g. tapping the 9 PM
   // notification) re-checks the evening check-in — the cold-open
-  // effect above only runs once per launch.
+  // effect above only runs once per launch. Never over onboarding:
+  // two sibling modals at once misbehave on iOS, and Amen would drop
+  // them back into a half-finished welcome.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
+      if (state === 'active' && !onboardingRef.current) {
         dailyVerse.shouldShowEveningDevotional().then((eve) => {
-          if (eve) setEveningVisible(true);
+          if (eve && !onboardingRef.current) setEveningVisible(true);
         });
       }
     });
@@ -454,7 +461,10 @@ export default function App() {
     if (!question) return false;
     const now = Date.now();
     if (question === lastSend.current.text && now - lastSend.current.at < 1500) {
-      return false; // double-tap of ➤ / tap + submit in the same breath
+      // Double-tap of ➤ / tap + submit in the same breath. "True": the
+      // message WAS just sent — a false here would make the mood chips
+      // think the check-in failed and ask the question again.
+      return true;
     }
     lastSend.current = { text: question, at: now };
     // Free-tier meter (asleep while PREMIUM_UNLOCKED). Prayer always
@@ -805,6 +815,10 @@ export default function App() {
             onToggleVerse={(enabled) => {
               dailyVerse.setDailyVerseEnabled(enabled).then((ok) => {
                 setVerseEnabled(enabled && ok);
+                // The evening switch follows the morning one until it's
+                // been touched — re-derive it so the UI tells the truth
+                // about whether 9 PM notifications are now scheduled.
+                dailyVerse.isEveningEnabled().then(setEveningEnabled);
                 rescheduleMissYou(); // re-arm: the reschedule wiped it
                 if (enabled && !ok) {
                   Alert.alert(
