@@ -38,6 +38,7 @@ export const MYSTERIES: Mystery[] = [
     tease: 'there was light three days before the sun existed',
     ask: 'tell me the mystery of light existing before the sun in Genesis 1',
     emoji: '✨',
+    free: true,
   },
   {
     id: 'melchizedek',
@@ -52,6 +53,7 @@ export const MYSTERIES: Mystery[] = [
     tease: 'three men went into the fire. four walked in it.',
     ask: 'tell me the mystery of the fourth man in the fiery furnace',
     emoji: '🔥',
+    free: true,
   },
   {
     id: 'same-mountain',
@@ -118,5 +120,7 @@ export const MYSTERIES: Mystery[] = [
   },
 ];
 
-/** The one mystery free listeners always get in full. */
-export const FREE_MYSTERY = 'the crimson worm (Psalm 22)';
+/** The mysteries free listeners always get in full — each one is an
+ * advertisement: the chills that make someone grab a friend. */
+export const FREE_MYSTERY =
+  'the crimson worm (Psalm 22), the fourth man in the fire (Daniel 3), and light before the sun (Genesis 1)';
