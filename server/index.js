@@ -68,6 +68,66 @@ app.use((req, res, next) => {
   next();
 });
 
+// --- rate limits ------------------------------------------------------
+// The app token is shared by every install (and the repo is public),
+// so the server must not trust clients to behave. Two layers:
+//   per-IP sliding hourly windows — one abusive device can't monopolize
+//   global daily circuit breakers — even a botnet can only burn one
+//     day's allowance before getting 429s; the prepaid/no-overage
+//     billing caps above this are the final wall.
+// In-memory is fine: one Render instance, and a restart resetting the
+// counters is harmless.
+app.set('trust proxy', 1); // Render sits in front; req.ip = client IP
+
+const HOUR = 3600_000;
+const PER_IP_HOURLY = { '/v1/messages': 60, '/tts': 150, '/stt': 90 };
+const GLOBAL_DAILY = { '/v1/messages': 3000, '/tts': 8000, '/stt': 4000 };
+
+const ipHits = new Map(); // ip -> { route -> [timestamps] }
+let globalDay = new Date().toDateString();
+const globalCounts = {};
+
+setInterval(() => {
+  // Sweep idle IPs so the map can't grow forever.
+  const cutoff = Date.now() - HOUR;
+  for (const [ip, routes] of ipHits) {
+    let alive = false;
+    for (const [r, times] of Object.entries(routes)) {
+      routes[r] = times.filter((t) => t > cutoff);
+      if (routes[r].length) alive = true;
+    }
+    if (!alive) ipHits.delete(ip);
+  }
+}, 10 * 60_000).unref();
+
+app.use((req, res, next) => {
+  const route = Object.keys(PER_IP_HOURLY).find((r) => req.path.startsWith(r));
+  if (!route) return next();
+
+  const today = new Date().toDateString();
+  if (today !== globalDay) {
+    globalDay = today;
+    for (const k of Object.keys(globalCounts)) globalCounts[k] = 0;
+  }
+  globalCounts[route] = (globalCounts[route] || 0) + 1;
+  if (globalCounts[route] > GLOBAL_DAILY[route]) {
+    return res.status(429).json({ error: 'resting for today — try tomorrow' });
+  }
+
+  const ip = req.ip || 'unknown';
+  const now = Date.now();
+  let routes = ipHits.get(ip);
+  if (!routes) ipHits.set(ip, (routes = {}));
+  const times = (routes[route] = (routes[route] || []).filter(
+    (t) => t > now - HOUR
+  ));
+  if (times.length >= PER_IP_HOURLY[route]) {
+    return res.status(429).json({ error: 'too many requests — slow down' });
+  }
+  times.push(now);
+  next();
+});
+
 // Only /stt carries real payload (base64 voice recordings); everything
 // else is small JSON.
 app.use('/stt', express.json({ limit: '25mb' }));
