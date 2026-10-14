@@ -88,6 +88,11 @@ export default function App() {
   const [voiceId, setVoiceId] = useState('');
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [bibleOpen, setBibleOpen] = useState(false);
+  // A Start Here path: open the Bible straight at this book & chapter.
+  const [bibleTarget, setBibleTarget] = useState<{
+    book: string;
+    chapter: number;
+  } | null>(null);
   const [journeyOpen, setJourneyOpen] = useState(false);
   const [devotionalVisible, setDevotionalVisible] = useState(false);
   const [devotionalDate, setDevotionalDate] = useState<Date | null>(null);
@@ -898,6 +903,12 @@ export default function App() {
               setJourneyOpen(false);
               setBibleOpen(true);
             }}
+            onStartPath={(book, chapter) => {
+              markActive();
+              setJourneyOpen(false);
+              setBibleTarget({ book, chapter });
+              setBibleOpen(true);
+            }}
             onOpenDevotional={(date) => {
               markActive();
               setJourneyOpen(false);
@@ -918,9 +929,11 @@ export default function App() {
 
           <BibleScreen
             visible={bibleOpen}
+            openAt={bibleTarget}
             onClose={() => {
               markActive();
               setBibleOpen(false);
+              setBibleTarget(null); // a plain open shouldn't re-jump
             }}
           />
         </KeyboardAvoidingView>

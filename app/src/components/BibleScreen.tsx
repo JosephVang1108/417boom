@@ -23,10 +23,13 @@ import * as stats from '../lib/stats';
 import { MEDALLIONS } from '../lib/stats';
 import * as tier from '../lib/tier';
 import * as voice from '../lib/voice';
+import { START_PATHS } from '../lib/startHere';
 import Medallion from './Medallion';
 
 interface Props {
   visible: boolean;
+  /** Open straight to a book and chapter (a Start Here path). */
+  openAt?: { book: string; chapter: number } | null;
   onClose: () => void;
 }
 
@@ -76,7 +79,7 @@ const TIMELINE_GROUPS = [
   { title: 'The End & the New Beginning', books: byName(['Revelation']) },
 ];
 
-export default function BibleScreen({ visible, onClose }: Props) {
+export default function BibleScreen({ visible, openAt, onClose }: Props) {
   const [book, setBook] = useState<BibleBook | null>(null);
   const [chapter, setChapter] = useState<number | null>(null);
   const [verses, setVerses] = useState<BibleVerse[] | null>(null);
@@ -154,6 +157,20 @@ export default function BibleScreen({ visible, onClose }: Props) {
   useEffect(() => {
     if (visible) setReaderId(voice.getReaderVoice());
   }, [visible]);
+
+  // Jump straight to a requested book+chapter (a Start Here path).
+  const goTo = (bookName: string, ch: number) => {
+    const b = ALL_BOOKS.find((x) => x.name === bookName);
+    if (!b) return;
+    if (readingRef.current) stopReading();
+    setBook(b);
+    setChapter(Math.min(ch, b.chapters));
+  };
+
+  useEffect(() => {
+    if (visible && openAt) goTo(openAt.book, openAt.chapter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, openAt]);
 
   const pickReaderVoice = (id: string | null) => {
     if (readingRef.current) stopReading();
@@ -367,6 +384,30 @@ export default function BibleScreen({ visible, onClose }: Props) {
                 <Text style={styles.continueArrow}>›</Text>
               </Pressable>
             )}
+            {/* Where do I start? — needs, not book names */}
+            <Text style={styles.startLabel}>NOT SURE WHERE TO START?</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.startRow}
+            >
+              {START_PATHS.map((p) => (
+                <Pressable
+                  key={p.id}
+                  style={styles.startCard}
+                  onPress={() => goTo(p.book, p.chapter)}
+                >
+                  <Text style={styles.startEmoji}>{p.emoji}</Text>
+                  <Text style={styles.startNeed}>{p.need}</Text>
+                  <Text style={styles.startWhy} numberOfLines={3}>
+                    {p.why}
+                  </Text>
+                  <Text style={styles.startWhere}>
+                    {p.book} {p.chapter} ›
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
             <View style={styles.orderRow}>
               <Pressable
                 style={[
@@ -628,6 +669,49 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     justifyContent: 'center',
+  },
+  startLabel: {
+    color: '#9A8B6C',
+    fontSize: 11,
+    letterSpacing: 2.5,
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  startRow: {
+    gap: 10,
+    paddingBottom: 14,
+    paddingRight: 8,
+  },
+  startCard: {
+    width: 172,
+    backgroundColor: 'rgba(200,164,92,0.10)',
+    borderColor: 'rgba(185,150,78,0.35)',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+  },
+  startEmoji: {
+    fontSize: 20,
+    marginBottom: 6,
+  },
+  startNeed: {
+    color: '#F0E6CE',
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  startWhy: {
+    color: '#B9AF98',
+    fontSize: 12,
+    lineHeight: 17,
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  startWhere: {
+    color: '#C8A45C',
+    fontSize: 13,
+    fontWeight: '700',
   },
   continueCard: {
     flexDirection: 'row',
