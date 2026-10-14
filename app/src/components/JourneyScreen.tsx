@@ -24,6 +24,7 @@ import {
 import Medallion from './Medallion';
 import SermonTheater from './SermonTheater';
 import { START_PATHS } from '../lib/startHere';
+import { MYSTERIES, Mystery } from '../lib/mysteries';
 
 interface Props {
   visible: boolean;
@@ -105,6 +106,17 @@ export default function JourneyScreen({
     Alert.alert(
       'This telling is waiting for you',
       'The full stories live in Jireh Premium — that’s what keeps this place open and growing. David & Goliath is yours anytime, and he’d love to tell it.'
+    );
+  };
+
+  const openMystery = (m: Mystery) => {
+    if (m.free || PREMIUM_UNLOCKED) {
+      onTellStory(m.ask);
+      return;
+    }
+    Alert.alert(
+      'This mystery is still sealed',
+      'The full unveilings live in Jireh Premium — that’s what keeps this place open. The Crimson Worm is yours anytime… and it will give you chills.'
     );
   };
 
@@ -334,6 +346,38 @@ export default function JourneyScreen({
                   ]}
                 >
                   {s.free ? 'FREE' : PREMIUM_UNLOCKED ? 'PREMIUM ✦' : '🔒 PREMIUM'}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          {/* Bible Mysteries — hooks first, then the reveal */}
+          <Text style={styles.sectionTitle}>Mysteries · hidden in plain sight</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carousel}
+          >
+            {MYSTERIES.map((m) => (
+              <Pressable
+                key={m.id}
+                style={styles.mysteryCard}
+                onPress={() => openMystery(m)}
+              >
+                <View style={styles.mysteryEmojiRing}>
+                  <Text style={styles.mysteryEmoji}>{m.emoji}</Text>
+                </View>
+                <Text style={styles.mysteryTitle}>{m.title}</Text>
+                <Text style={styles.mysteryTease} numberOfLines={3}>
+                  {m.tease}
+                </Text>
+                <Text
+                  style={[
+                    styles.storyTag,
+                    (m.free || PREMIUM_UNLOCKED) && styles.storyTagFree,
+                  ]}
+                >
+                  {m.free ? 'FREE' : PREMIUM_UNLOCKED ? 'PREMIUM ✦' : '🔒 PREMIUM'}
                 </Text>
               </Pressable>
             ))}
@@ -672,6 +716,44 @@ const styles = StyleSheet.create({
   carousel: {
     gap: 10,
     paddingRight: 18,
+  },
+  mysteryCard: {
+    width: 150,
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: '#2E2619', // candle-lit dark against the parchment
+    borderWidth: 1,
+    borderColor: 'rgba(139,107,46,0.5)',
+    alignItems: 'center',
+  },
+  mysteryEmojiRing: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: 'rgba(200,164,92,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(200,164,92,0.08)',
+  },
+  mysteryEmoji: {
+    fontSize: 22,
+  },
+  mysteryTitle: {
+    color: '#F0E6CE',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  mysteryTease: {
+    color: '#B9AF98',
+    fontSize: 11,
+    lineHeight: 15,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 4,
+    minHeight: 45,
   },
   storyCard: {
     width: 132,
