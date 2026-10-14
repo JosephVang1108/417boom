@@ -13,12 +13,16 @@ export interface StartPath {
   chapter: number;
   /** One warm line from him on why this book. */
   why: string;
+  /** Gold-ringed medallion art, matching the rest of the app. */
+  icon: number;
+  /** Fallback glyph if the art can't load. */
   emoji: string;
 }
 
 export const START_PATHS: StartPath[] = [
   {
     id: 'know-jesus',
+    icon: require('../../assets/media/s-resurrection.jpg'),
     need: 'I want to know who Jesus is',
     book: 'John',
     chapter: 1,
@@ -27,6 +31,7 @@ export const START_PATHS: StartPath[] = [
   },
   {
     id: 'identity',
+    icon: require('../../assets/media/m-city-hill.jpg'),
     need: 'Who am I in Christ?',
     book: 'Ephesians',
     chapter: 1,
@@ -35,6 +40,7 @@ export const START_PATHS: StartPath[] = [
   },
   {
     id: 'anxious',
+    icon: require('../../assets/media/m-dove.jpg'),
     need: "I'm anxious or afraid",
     book: 'Philippians',
     chapter: 4,
@@ -43,6 +49,7 @@ export const START_PATHS: StartPath[] = [
   },
   {
     id: 'brokenhearted',
+    icon: require('../../assets/media/s-david.jpg'),
     need: 'My heart is broken',
     book: 'Psalms',
     chapter: 23,
@@ -51,6 +58,7 @@ export const START_PATHS: StartPath[] = [
   },
   {
     id: 'wisdom',
+    icon: require('../../assets/media/m-lamp-stand.jpg'),
     need: 'I need wisdom for a decision',
     book: 'Proverbs',
     chapter: 3,
@@ -59,6 +67,7 @@ export const START_PATHS: StartPath[] = [
   },
   {
     id: 'far-away',
+    icon: require('../../assets/media/s-prodigal.jpg'),
     need: 'I feel far from God',
     book: 'Luke',
     chapter: 15,
@@ -67,6 +76,7 @@ export const START_PATHS: StartPath[] = [
   },
   {
     id: 'hope',
+    icon: require('../../assets/media/m-first-light.jpg'),
     need: 'I need hope',
     book: 'Romans',
     chapter: 8,
@@ -75,6 +85,7 @@ export const START_PATHS: StartPath[] = [
   },
   {
     id: 'live-it',
+    icon: require('../../assets/media/m-salt-light.jpg'),
     need: 'How do I live this out?',
     book: 'James',
     chapter: 1,
