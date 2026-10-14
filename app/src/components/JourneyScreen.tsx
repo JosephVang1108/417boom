@@ -23,7 +23,6 @@ import {
 } from '../lib/stats';
 import Medallion from './Medallion';
 import SermonTheater from './SermonTheater';
-import { START_PATHS } from '../lib/startHere';
 import { MYSTERIES, Mystery } from '../lib/mysteries';
 
 interface Props {
@@ -31,8 +30,6 @@ interface Props {
   streak: number;
   onClose: () => void;
   onOpenBible: () => void;
-  /** Open the Bible straight to a Start Here path's book & chapter. */
-  onStartPath: (book: string, chapter: number) => void;
   onOpenDevotional: (date?: Date) => void;
   onTellStory: (ask: string) => void;
   onSermon: () => void;
@@ -71,13 +68,11 @@ export default function JourneyScreen({
   streak,
   onClose,
   onOpenBible,
-  onStartPath,
   onOpenDevotional,
   onTellStory,
   onSermon,
 }: Props) {
   const [stats, setStats] = useState<JourneyStats>(getStats());
-  const [badgesOpen, setBadgesOpen] = useState(false);
   const [allBadgesOpen, setAllBadgesOpen] = useState(false);
   const [theater, setTheater] = useState<RecordedSermon | null>(null);
 
@@ -191,28 +186,6 @@ export default function JourneyScreen({
             <Text style={styles.rowArrow}>›</Text>
           </Pressable>
 
-          {/* Where do I start? — needs, not book names */}
-          <Text style={styles.startShelfLabel}>NOT SURE WHERE TO START?</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.startShelfRow}
-          >
-            {START_PATHS.map((p) => (
-              <Pressable
-                key={p.id}
-                style={styles.startShelfCard}
-                onPress={() => onStartPath(p.book, p.chapter)}
-              >
-                <Text style={styles.startShelfEmoji}>{p.emoji}</Text>
-                <Text style={styles.startShelfNeed}>{p.need}</Text>
-                <Text style={styles.startShelfWhere}>
-                  {p.book} {p.chapter} ›
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
           {/* Today's devotional, anytime */}
           <Pressable
             style={styles.wordButton}
@@ -276,28 +249,8 @@ export default function JourneyScreen({
             </Pressable>
           ))}
 
-          {/* Lifetime moments */}
-          <View style={styles.countRow}>
-            <View style={styles.countCard}>
-              <Text style={styles.countNum}>{stats.prayers}</Text>
-              <Text style={styles.countLabel}>prayers</Text>
-            </View>
-            <View style={styles.countCard}>
-              <Text style={styles.countNum}>{stats.chapters}</Text>
-              <Text style={styles.countLabel}>chapters</Text>
-            </View>
-            <View style={styles.countCard}>
-              <Text style={styles.countNum}>{stats.stories}</Text>
-              <Text style={styles.countLabel}>stories</Text>
-            </View>
-            <View style={styles.countCard}>
-              <Text style={styles.countNum}>{stats.shares}</Text>
-              <Text style={styles.countLabel}>shared</Text>
-            </View>
-          </View>
-
           {/* Recorded story tellings — he tells it to your face */}
-          <Text style={styles.sectionTitle}>Story time, recorded</Text>
+          <Text style={styles.sectionTitle}>Story time</Text>
           {RECORDED_STORIES.map((s) => (
             <Pressable
               key={s.id}
@@ -383,36 +336,48 @@ export default function JourneyScreen({
             ))}
           </ScrollView>
 
-          {/* Badges, tucked into a drawer */}
-          <Pressable
-            style={styles.badgeHeader}
-            onPress={() => setBadgesOpen((o) => !o)}
+          {/* Badges — always on display */}
+          <Text style={styles.sectionTitle}>
+            Badges · {earned.length} of {badges.length}
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carousel}
           >
-            <Text style={styles.sectionTitle}>
-              Badges · {earned.length} of {badges.length}
-            </Text>
-            <Text style={styles.badgeChevron}>{badgesOpen ? '▾' : '▸'}</Text>
-          </Pressable>
-          {badgesOpen && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.carousel}
+            {/* First tile: open the whole cabinet at once. */}
+            <Pressable
+              style={[styles.badge, styles.badgeAllTile]}
+              onPress={() => setAllBadgesOpen(true)}
             >
-              {/* First tile: open the whole cabinet at once. */}
-              <Pressable
-                style={[styles.badge, styles.badgeAllTile]}
-                onPress={() => setAllBadgesOpen(true)}
-              >
-                <Medallion source={MEDALLIONS.dove} size={54} fallback="🕊️" />
-                <Text style={styles.badgeName}>See them all</Text>
-                <Text style={styles.badgeDesc}>
-                  {earned.length} earned · tap to view
-                </Text>
-              </Pressable>
-              {badges.map(badgeCard)}
-            </ScrollView>
-          )}
+              <Medallion source={MEDALLIONS.dove} size={54} fallback="🕊️" />
+              <Text style={styles.badgeName}>See them all</Text>
+              <Text style={styles.badgeDesc}>
+                {earned.length} earned · tap to view
+              </Text>
+            </Pressable>
+            {badges.map(badgeCard)}
+          </ScrollView>
+
+          {/* Lifetime moments */}
+          <View style={styles.countRow}>
+            <View style={styles.countCard}>
+              <Text style={styles.countNum}>{stats.prayers}</Text>
+              <Text style={styles.countLabel}>prayers</Text>
+            </View>
+            <View style={styles.countCard}>
+              <Text style={styles.countNum}>{stats.chapters}</Text>
+              <Text style={styles.countLabel}>chapters</Text>
+            </View>
+            <View style={styles.countCard}>
+              <Text style={styles.countNum}>{stats.stories}</Text>
+              <Text style={styles.countLabel}>stories</Text>
+            </View>
+            <View style={styles.countCard}>
+              <Text style={styles.countNum}>{stats.shares}</Text>
+              <Text style={styles.countLabel}>shared</Text>
+            </View>
+          </View>
 
           {/* Prayers being carried */}
           {prayers.length > 0 && (
@@ -585,42 +550,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
     textAlign: 'center',
-  },
-  startShelfLabel: {
-    color: INK_SOFT,
-    fontSize: 11,
-    letterSpacing: 2.5,
-    marginTop: 18,
-    marginBottom: 10,
-  },
-  startShelfRow: {
-    gap: 10,
-    paddingBottom: 4,
-    paddingRight: 8,
-  },
-  startShelfCard: {
-    width: 150,
-    backgroundColor: CARD,
-    borderColor: 'rgba(139,107,46,0.35)',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
-  },
-  startShelfEmoji: {
-    fontSize: 18,
-    marginBottom: 6,
-  },
-  startShelfNeed: {
-    color: INK,
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 19,
-    marginBottom: 6,
-  },
-  startShelfWhere: {
-    color: GOLD,
-    fontSize: 12,
-    fontWeight: '700',
   },
   bibleButton: {
     marginTop: 14,

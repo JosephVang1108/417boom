@@ -397,7 +397,7 @@ export default function BibleScreen({ visible, openAt, onClose }: Props) {
                   style={styles.startCard}
                   onPress={() => goTo(p.book, p.chapter)}
                 >
-                  <Text style={styles.startEmoji}>{p.emoji}</Text>
+                  <Medallion source={p.icon} size={44} fallback={p.emoji} />
                   <Text style={styles.startNeed}>{p.need}</Text>
                   <Text style={styles.startWhy} numberOfLines={3}>
                     {p.why}
@@ -684,32 +684,29 @@ const styles = StyleSheet.create({
   },
   startCard: {
     width: 172,
-    backgroundColor: 'rgba(200,164,92,0.10)',
-    borderColor: 'rgba(185,150,78,0.35)',
+    backgroundColor: '#FBF5E7',
+    borderColor: 'rgba(139,107,46,0.4)',
     borderWidth: 1,
     borderRadius: 14,
     padding: 12,
   },
-  startEmoji: {
-    fontSize: 20,
-    marginBottom: 6,
-  },
   startNeed: {
-    color: '#F0E6CE',
+    color: '#3E3121',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     lineHeight: 20,
+    marginTop: 8,
     marginBottom: 6,
   },
   startWhy: {
-    color: '#B9AF98',
+    color: '#8A7A5C',
     fontSize: 12,
     lineHeight: 17,
     fontStyle: 'italic',
     marginBottom: 8,
   },
   startWhere: {
-    color: '#C8A45C',
+    color: '#8B6B2E',
     fontSize: 13,
     fontWeight: '700',
   },
