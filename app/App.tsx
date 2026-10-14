@@ -455,7 +455,10 @@ export default function App() {
     }
   };
 
-  const send = async (spokenQuestion?: string): Promise<boolean> => {
+  const send = async (
+    spokenQuestion?: string,
+    lore?: string
+  ): Promise<boolean> => {
     markActive();
     const question = (spokenQuestion ?? input).trim();
     if (!question) return false;
@@ -492,10 +495,10 @@ export default function App() {
     // Prefer Claude when a key is set; fall back to the offline verse engine.
     let response: GuideResponse | null = null;
     if (aiReady) {
-      response = await aiRespond(
-        question,
-        needHatePrayer ? { hatePrayer: true } : {}
-      );
+      response = await aiRespond(question, {
+        ...(needHatePrayer ? { hatePrayer: true } : {}),
+        ...(lore ? { lore } : {}),
+      });
       if (!isAiAvailable()) setAiReady(false); // key was rejected
     }
     if (!response) response = needHatePrayer ? hatePrayerFallback() : respond(question);
@@ -908,6 +911,11 @@ export default function App() {
               markActive();
               setJourneyOpen(false);
               send(`Tell me the story of ${ask}.`);
+            }}
+            onTellMystery={(m) => {
+              markActive();
+              setJourneyOpen(false);
+              send(`${m.ask}.`, m.lore);
             }}
             onSermon={() => {
               markActive();
