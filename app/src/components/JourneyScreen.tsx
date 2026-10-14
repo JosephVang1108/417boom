@@ -32,6 +32,8 @@ interface Props {
   onOpenBible: () => void;
   onOpenDevotional: (date?: Date) => void;
   onTellStory: (ask: string) => void;
+  /** A mystery card: sends its exact ask plus its researched lore. */
+  onTellMystery: (m: Mystery) => void;
   onSermon: () => void;
 }
 
@@ -70,6 +72,7 @@ export default function JourneyScreen({
   onOpenBible,
   onOpenDevotional,
   onTellStory,
+  onTellMystery,
   onSermon,
 }: Props) {
   const [stats, setStats] = useState<JourneyStats>(getStats());
@@ -106,7 +109,7 @@ export default function JourneyScreen({
 
   const openMystery = (m: Mystery) => {
     if (m.free || PREMIUM_UNLOCKED) {
-      onTellStory(m.ask);
+      onTellMystery(m);
       return;
     }
     Alert.alert(
