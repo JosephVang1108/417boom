@@ -1,0 +1,22 @@
+# Keeps the Render free-tier server awake (it sleeps after 15 idle
+# minutes, making the first user wait ~30-60s) and doubles as uptime
+# monitoring: if /health stops answering, this run fails and GitHub
+# emails the repo owner.
+name: Keep server warm
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 50 https://four17boom.onrender.com/health)
+          echo "health: $code"
+          if [ "$code" != "200" ]; then
+            echo "Server unhealthy (HTTP $code)" >&2
+            exit 1
+          fi

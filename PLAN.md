@@ -101,6 +101,35 @@ the real subscription check.
   caching, turbo voice for long reads, ElevenLabs enterprise rates,
   web-funnel subscriptions (Stripe ~3% vs Apple 15–30%)
 
+## 4.5 Scale Readiness — what bogs down first, and the fix for each
+
+The failure order as downloads grow (each fix is known and cheap):
+
+1. **Render cold starts** (happening today) — free tier sleeps after
+   15 idle min; first user waits 30–60s. NOW: keep-warm GitHub Action
+   pings /health every 10 min (also emails on downtime). AT LAUNCH:
+   Render Starter $7/mo, always-on.
+2. **Video bandwidth** (~a few dozen simultaneous viewers) — every
+   video byte streams THROUGH our server via the /media proxy. FIX:
+   move media to Cloudflare R2 (free storage + free unlimited egress,
+   serves proper video/mp4 so phones stream direct; server drops out
+   of the video path entirely). Needs Joseph's free Cloudflare
+   account; GitHub release stays as the master archive. DO BEFORE ADS.
+3. **ElevenLabs quota** (~hundreds of daily talkers) — spoken replies,
+   stories, and mic transcription burn plan characters/minutes; a
+   viral day can drain a month. Governors: free-tier daily caps turn
+   on at launch (the real cost valve); Bible read-aloud is cached
+   server-side (each passage pays once ever); plan tier scales with
+   Premium revenue. Degrades to device voice, never breaks.
+4. **Anthropic limits** (thousands of users) — prepaid ceiling + rate
+   tiers; raise with revenue, consider cheaper chat model + prompt
+   caching (see Cost levers in §4).
+
+Standing protections already live: per-IP hourly rate limits + global
+daily circuit breakers on the server; prepaid/no-overage billing as
+the final wall. Still owed before scale: server-side per-user caps
+(needs accounts, Phase 2), BACKEND_TOKEN rotation, R2 migration above.
+
 ## 5. The Numbers (assumptions: 3% convert, $9.99, Apple 15%/30%)
 
 | Downloads/mo | Subs | Gross | Profit |
