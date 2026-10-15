@@ -1,12 +1,11 @@
 // Recorded media the app streams — real lip-synced renders of him
-// preaching in his own voice. The files live as GitHub release assets
-// (permanent, free); the "Archive media" workflow puts them there.
-// They stream THROUGH our server because GitHub labels the files
-// application/octet-stream, which the iPhone player refuses — the
-// server relays the bytes with an honest video/mp4 header.
-import { BACKEND_URL } from './config';
+// preaching in his own voice. Phones stream straight from Cloudflare R2
+// (bucket jireh-media behind media.jirehbible.com: free egress, proper
+// video/mp4 headers, Range support) so the backend is out of the video
+// path. The GitHub `media` release stays the master archive, and the
+// server's /media proxy remains as a fallback for older builds.
 
-const MEDIA_BASE = `${BACKEND_URL ?? ''}/media`;
+const MEDIA_BASE = 'https://media.jirehbible.com';
 
 export interface RecordedSermon {
   id: string;
