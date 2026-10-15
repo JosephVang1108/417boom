@@ -353,17 +353,26 @@ export default function App() {
     };
   }, []);
 
+  // The model occasionally flags a casual reply that merely MENTIONS
+  // prayer as a prayer. Trust the flag only when the words actually
+  // pray — every real prayer ends with "Amen" by design. A mis-flag
+  // closed his eyes for a whole greeting (looked frozen), burned the
+  // free tier's daily prayer, and journaled "Hello?" as a request.
+  const isRealPrayer = (r: GuideResponse): boolean =>
+    !!r.isPrayer && /amen[\s.!?…"'")\]]*$/i.test(r.intro.trim());
+
   const speak = (response: GuideResponse) => {
     setSpeaking(true);
+    const praying = isRealPrayer(response);
     // During a prayer, he closes his eyes and bows his head.
-    if (response.isPrayer) setPraying(true);
+    if (praying) setPraying(true);
     voice.speak(
       spokenText(response),
       () => {
         setSpeaking(false);
         setPraying(false);
       },
-      { story: response.isStory, prayer: response.isPrayer }
+      { story: response.isStory, prayer: praying }
     );
   };
 
@@ -505,18 +514,19 @@ export default function App() {
     if (needHatePrayer) hateStrikes.current = 0;
 
     setHistory((h) => h.map((ex) => (ex.id === id ? { ...ex, response } : ex)));
-    tier.noteMessage(!!response.isPrayer);
+    const prayed = isRealPrayer(response);
+    tier.noteMessage(prayed);
     // Track the prayer conversation: a prayer ask that gets a question
     // back ("what shall we bring?") keeps the free-tier gate open for
     // the next couple of replies, until the prayer itself is prayed.
-    if (response.isPrayer) {
+    if (prayed) {
       prayerFollowups.current = 0;
     } else if (tier.looksLikePrayer(question)) {
       prayerFollowups.current = 2;
     } else if (prayerFollowups.current > 0) {
       prayerFollowups.current -= 1;
     }
-    if (response.isPrayer && !needHatePrayer) {
+    if (prayed && !needHatePrayer) {
       journal.addPrayer(shown);
       stats.bump('prayers');
     }

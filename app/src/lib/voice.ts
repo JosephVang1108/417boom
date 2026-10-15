@@ -8,6 +8,14 @@ const KEY_STORAGE = 'elevenlabs_api_key';
 const VOICE_ID_STORAGE = 'elevenlabs_voice_id';
 const READER_VOICE_STORAGE = 'reader_voice_id';
 
+// A fetch with no timeout can hang forever on a dead connection and
+// freeze the speaking UI with it. (Hermes has no AbortSignal.timeout.)
+function timeoutSignal(ms: number): AbortSignal {
+  const c = new AbortController();
+  setTimeout(() => c.abort(), ms);
+  return c.signal;
+}
+
 // Voices offered for Bible reading. id null means the app's own voice.
 // "Sarah" is a gentle female voice from the ElevenLabs standard library.
 export const READER_VOICES = [
@@ -467,6 +475,7 @@ export async function transcribe(uri: string): Promise<TranscribeResult> {
           'x-api-key': BACKEND_TOKEN!,
         },
         body: JSON.stringify({ audioBase64, mimeType: 'audio/mp4' }),
+        signal: timeoutSignal(90_000),
       });
       if (!res.ok) return { text: null, problem: 'error' };
       const json = (await res.json()) as { text?: string };
@@ -489,6 +498,7 @@ export async function transcribe(uri: string): Promise<TranscribeResult> {
       method: 'POST',
       headers: { 'xi-api-key': elevenKey },
       body: form,
+      signal: timeoutSignal(90_000),
     });
     if (res.status === 401 || res.status === 403) {
       return { text: null, problem: 'permission' };
