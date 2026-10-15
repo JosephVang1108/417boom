@@ -24,7 +24,10 @@ import Medallion from './Medallion';
 
 interface Props {
   visible: boolean;
-  streak: number;
+  /** Days since they met — the SAME number the Journey header shows.
+   * (The Amen celebration used to show the streak, so "Day 10
+   * together" on one screen and "Day 2" on the next read as a bug.) */
+  day: number;
   /** Which morning to show — defaults to today. */
   forDate?: Date | null;
   /** 'evening' closes the day: dusk glow, rest verse, same Amen. */
@@ -45,7 +48,7 @@ const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' });
  */
 export default function DailyDevotional({
   visible,
-  streak,
+  day,
   forDate,
   variant = 'morning',
   onDone,
@@ -219,7 +222,7 @@ export default function DailyDevotional({
               }}
             >
               <Text style={styles.celebrateDay}>
-                {evening ? 'Rest easy' : `Day ${Math.max(streak, 1)}`}
+                {evening ? 'Rest easy' : `Day ${Math.max(day, 1)}`}
               </Text>
               <Text style={styles.celebrateSub}>
                 {evening ? 'he keeps watch tonight' : 'walking together'}
