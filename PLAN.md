@@ -89,7 +89,9 @@ the real subscription check.
 
 ## 4. Cost Safety (never a surprise bill)
 
-- Anthropic: **prepaid credits** — hard ceiling, auto-reload off/capped
+- Anthropic: prepaid credits, auto-reload ON with **monthly spend
+  limit $100** (the real wall — raise deliberately with revenue), plus
+  the Max plan's included $200/mo API credits claimed first
 - ElevenLabs: fixed plan quota, usage-overage billing **OFF**
 - Render: flat instance
 - Before adding a persistent disk: cap/evict the read-aloud voice cache
