@@ -857,7 +857,7 @@ export default function App() {
 
           <DailyDevotional
             visible={devotionalVisible}
-            streak={streak}
+            day={daysTogether}
             forDate={devotionalDate}
             onDone={() => {
               // Revisiting an old morning doesn't use up today's showing.
@@ -873,7 +873,7 @@ export default function App() {
 
           <DailyDevotional
             visible={eveningVisible}
-            streak={streak}
+            day={daysTogether}
             variant="evening"
             onDone={() => {
               dailyVerse.markEveningSeen();
