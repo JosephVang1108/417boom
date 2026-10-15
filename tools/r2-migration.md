@@ -1,4 +1,13 @@
-# R2 media migration — run when R2_* env vars are present
+# R2 media migration — EXECUTED Oct 15, 2026 (kept as the playbook for new uploads)
+
+Status: all three streamed videos live in the bucket and serve from
+`https://media.jirehbible.com/<name>` (custom domain, Range verified);
+`MEDIA_BASE` in app/src/lib/media.ts points there. Remaining: remove
+the server /media proxy once every device is on the R2 build; optional
+archive-media.yml R2 upload step. NOTE: the real `R2_ENDPOINT` is
+`https://<account-id>.r2.cloudflarestorage.com` — if the stored env var
+still says LONGCODE, uploads via env var fail (Joseph was asked to fix
+the saved value; the account-id form is in the bucket's Settings page).
 
 Goal: phones stream videos from Cloudflare R2 (free egress) instead of
 through the Render server's /media proxy. Server exits the video path.

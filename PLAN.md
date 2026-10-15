@@ -111,12 +111,13 @@ The failure order as downloads grow (each fix is known and cheap):
    15 idle min; first user waits 30–60s. NOW: keep-warm GitHub Action
    pings /health every 10 min (also emails on downtime). AT LAUNCH:
    Render Starter $7/mo, always-on.
-2. **Video bandwidth** (~a few dozen simultaneous viewers) — every
-   video byte streams THROUGH our server via the /media proxy. FIX:
-   move media to Cloudflare R2 (free storage + free unlimited egress,
-   serves proper video/mp4 so phones stream direct; server drops out
-   of the video path entirely). Needs Joseph's free Cloudflare
-   account; GitHub release stays as the master archive. DO BEFORE ADS.
+2. **Video bandwidth** — DONE (Oct 15, 2026). Videos live in Cloudflare
+   R2 (bucket `jireh-media`) behind `media.jirehbible.com` (custom
+   domain, free unlimited egress, Range verified). The app streams
+   direct; the server /media proxy stays only as a fallback for older
+   builds — remove it once every TestFlight device is on the R2 build.
+   GitHub release stays the master archive. New renders: one
+   `aws s3 cp`-style upload per file until archive-media.yml learns R2.
 3. **ElevenLabs quota** (~hundreds of daily talkers) — spoken replies,
    stories, and mic transcription burn plan characters/minutes; a
    viral day can drain a month. Governors: free-tier daily caps turn
