@@ -235,7 +235,7 @@ export default function SettingsModal({
               />
             </View>
             <View style={styles.toggleRow}>
-              <Text style={styles.body}>A goodnight nudge at 9:00 PM</Text>
+              <Text style={styles.body}>A goodnight nudge at 7:00 PM</Text>
               <Switch
                 value={eveningEnabled}
                 onValueChange={onToggleEvening}

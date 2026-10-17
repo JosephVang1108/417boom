@@ -9,8 +9,8 @@ const EVENING_KEY = 'evening_nudge_enabled_v2';
 const DEVOTIONAL_DAY_KEY = 'devotional_last_day';
 const EVENING_DAY_KEY = 'evening_devotional_last_day';
 const HOUR = 8; // 8:00 AM local
-const EVENING_HOUR = 21; // 9:00 PM local
-const EVENING_FROM_HOUR = 20; // the evening check-in unlocks at 8 PM
+const EVENING_HOUR = 19; // 7:00 PM local — catches people before wind-down
+const EVENING_FROM_HOUR = 19; // the evening check-in unlocks with the notification
 
 // Soft evening lines — a nightly invitation to close the day with him.
 const EVENING_LINES = [
@@ -121,7 +121,7 @@ export async function markDevotionalSeen(): Promise<void> {
   }
 }
 
-/** True in the evening (8 PM onward) when tonight's check-in hasn't
+/** True in the evening (7 PM onward) when tonight's check-in hasn't
  * been shown yet — the second Amen of the day. */
 export async function shouldShowEveningDevotional(): Promise<boolean> {
   if (new Date().getHours() < EVENING_FROM_HOUR) return false;
