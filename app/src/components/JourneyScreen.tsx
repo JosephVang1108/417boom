@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -23,7 +24,9 @@ import {
 } from '../lib/stats';
 import Medallion from './Medallion';
 import SermonTheater from './SermonTheater';
+import WallpapersScreen from './WallpapersScreen';
 import { MYSTERIES, Mystery } from '../lib/mysteries';
+import { WALLPAPERS, wallpaperThumbUrl } from '../lib/wallpapers';
 
 interface Props {
   visible: boolean;
@@ -78,6 +81,7 @@ export default function JourneyScreen({
   const [stats, setStats] = useState<JourneyStats>(getStats());
   const [allBadgesOpen, setAllBadgesOpen] = useState(false);
   const [theater, setTheater] = useState<RecordedSermon | null>(null);
+  const [wallpapersOpen, setWallpapersOpen] = useState(false);
 
   useEffect(() => {
     if (visible) loadStats().then((s) => setStats({ ...s }));
@@ -339,6 +343,41 @@ export default function JourneyScreen({
             ))}
           </ScrollView>
 
+          {/* Wallpapers — his word on the lock screen */}
+          <Text style={styles.sectionTitle}>
+            Wallpapers · his word on your lock screen
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carousel}
+          >
+            {WALLPAPERS.slice(0, 6).map((w) => (
+              <Pressable
+                key={w.id}
+                style={styles.wallpaperTile}
+                onPress={() => setWallpapersOpen(true)}
+              >
+                <Image
+                  source={{ uri: wallpaperThumbUrl(w) }}
+                  style={styles.wallpaperImage}
+                  resizeMode="cover"
+                />
+                {!w.free && !PREMIUM_UNLOCKED && (
+                  <Text style={styles.wallpaperLock}>🔒</Text>
+                )}
+              </Pressable>
+            ))}
+            <Pressable
+              style={[styles.wallpaperTile, styles.wallpaperMoreTile]}
+              onPress={() => setWallpapersOpen(true)}
+            >
+              <Text style={styles.wallpaperMoreText}>
+                See all {WALLPAPERS.length} →
+              </Text>
+            </Pressable>
+          </ScrollView>
+
           {/* Badges — always on display */}
           <Text style={styles.sectionTitle}>
             Badges · {earned.length} of {badges.length}
@@ -404,6 +443,11 @@ export default function JourneyScreen({
             verse you share counts. Keep walking.
           </Text>
         </ScrollView>
+
+        <WallpapersScreen
+          visible={wallpapersOpen}
+          onClose={() => setWallpapersOpen(false)}
+        />
 
         {/* The theater: mounted only while something is playing. */}
         {theater && (
@@ -695,6 +739,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: EDGE,
     alignItems: 'center',
+  },
+  wallpaperTile: {
+    width: 92,
+    height: 164,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#2E2619',
+    borderWidth: 1,
+    borderColor: 'rgba(139,107,46,0.5)',
+  },
+  wallpaperImage: {
+    ...(StyleSheet.absoluteFill as object),
+  },
+  wallpaperLock: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    fontSize: 14,
+  },
+  wallpaperMoreTile: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  wallpaperMoreText: {
+    color: 'rgba(240, 230, 206, 0.8)',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   storyEmoji: {
     fontSize: 28,

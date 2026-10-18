@@ -180,6 +180,17 @@ the final wall. Still owed before scale: server-side per-user caps
 
 **With store build:** widgets, routines, shareable verse-card images
 
+**Verse wallpapers (shipped to code Oct 2026, ships in build 18):**
+Wallpapers shelf on the Journey page — 12 verse wallpapers (incl. 5 of
+our Jesus: crucified, walking on water, with children, good shepherd,
+knocking) hosted on R2 under `media.jirehbible.com/wallpapers/`, full-
+screen preview with mock clock, Save to Photos (expo-media-library).
+Free tier: Lamb + Be Still; rest Premium (asleep behind
+PREMIUM_UNLOCKED). New art: FLUX scenes ~0.17cr, Jesus-reference via
+Nano Banana edit + portrait.png ~0.08cr; verse text composited with
+ffmpeg (Liberation Serif), upload via the R2 runbook. The Lamb is also
+the waitlist giveaway at `media.jirehbible.com/wallpaper-lamb-psalm23.png`.
+
 **Parked ideas (Joseph, Oct 2026):**
 - **Profiles with quick-switch** — e.g. "Kids" and "Parents" on one device.
   How he talks adapts per profile: simpler gentler language, kid-safe
