@@ -164,8 +164,11 @@ the final wall. Still owed before scale: server-side per-user caps
    e.g. 20% of first-year revenue from their code, paid quarterly, exact %
    stated in marketing. Never tie money to ratings/reviews. CPA/attorney
    review before scaling.
-5. Launch timed to a season: **Advent/Christmas or New Year's** (Lent as
-   backup). Seasonal pushes every year.
+5. Launch timed to a season: **DECIDED (Oct 19, 2026): launch week of
+   Dec 1, 2026 — Advent** (New Year's as fallback; never launch broken
+   for a date). Phase 2 critical path: RevenueCat subscriptions →
+   accounts + server-side caps → BACKEND_TOKEN rotation → App Store
+   listing. Seasonal pushes every year after.
 6. Paid ads only after LTV is measured (the Hallow/Bible Chat engine:
    LTV > CAC, then scale spend).
 
