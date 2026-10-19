@@ -295,10 +295,16 @@ app.get('/tts', async (req, res) => {
     // prayers came from. Multilingual stays only as the last resort.
     const models = ['eleven_turbo_v2_5', 'eleven_multilingual_v2'];
     let upstream = null;
+    let usedVoice = null;
+    let usedModel = null;
     outer: for (const v of voices) {
       for (const m of models) {
         upstream = await request(v, m);
-        if (upstream.ok || upstream.status >= 500) break outer;
+        if (upstream.ok || upstream.status >= 500) {
+          usedVoice = v;
+          usedModel = m;
+          break outer;
+        }
         // Failed attempt: drop its body or the connection stays held.
         upstream.body?.cancel().catch(() => {});
       }
@@ -307,6 +313,11 @@ app.get('/tts', async (req, res) => {
       upstream?.body?.cancel().catch(() => {});
       return res.status(502).json({ error: 'voice generation failed' });
     }
+    // Which voice/model actually spoke — the fallback chain is silent by
+    // design for the app, but the video render pipeline must be able to
+    // detect a fallback take and re-request rather than ship it.
+    res.set('x-jireh-voice', usedVoice);
+    res.set('x-jireh-model', usedModel);
     res.status(200).type('audio/mpeg');
     const audio = Readable.fromWeb(upstream.body);
     // Without a listener, a mid-stream ElevenLabs error would crash the
