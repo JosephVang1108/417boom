@@ -195,6 +195,12 @@ ffmpeg (Liberation Serif), upload via the R2 runbook. The Lamb is also
 the waitlist giveaway at `media.jirehbible.com/wallpaper-lamb-psalm23.png`.
 
 **Parked ideas (Joseph, Oct 2026):**
+- **"Pray first" gentle lock** — TikTok Creator Search Insights (Oct 20,
+  2026): "prayer app" at 246K searches/week (+35%), only 795 creators,
+  and the top related video (286K likes) demos an app that locks your
+  phone until you pray. Jireh version: an optional morning mode — the
+  phone's first unlock opens him praying before the feed. Post-launch;
+  needs Screen Time API research.
 - **Profiles with quick-switch** — e.g. "Kids" and "Parents" on one device.
   How he talks adapts per profile: simpler gentler language, kid-safe
   story pacing and bedtime mode for Kids; full depth for Parents.
