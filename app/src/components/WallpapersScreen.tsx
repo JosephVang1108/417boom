@@ -14,9 +14,9 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { PREMIUM_UNLOCKED } from '../lib/config';
+import { useCatalog } from '../lib/catalog';
 import {
   Wallpaper,
-  WALLPAPERS,
   wallpaperThumbUrl,
   wallpaperUrl,
 } from '../lib/wallpapers';
@@ -35,6 +35,7 @@ interface Props {
 export default function WallpapersScreen({ visible, onClose }: Props) {
   const [preview, setPreview] = useState<Wallpaper | null>(null);
   const [saving, setSaving] = useState(false);
+  const { wallpapers: WALLPAPERS } = useCatalog();
   const { width } = useWindowDimensions();
   // Two columns with the screen's 16px gutters and a 12px gap.
   const tileW = (width - 16 * 2 - 12) / 2;
