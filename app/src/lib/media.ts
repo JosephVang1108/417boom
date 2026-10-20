@@ -13,7 +13,8 @@ export interface RecordedSermon {
   tagline: string;
   minutes: number;
   url: string;
-  icon: number;
+  /** Bundled asset (require) or a remote https URL from the catalog. */
+  icon: number | string;
   emoji: string;
   free?: boolean;
 }

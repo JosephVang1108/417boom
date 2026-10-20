@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { PREMIUM_UNLOCKED } from '../lib/config';
 import * as journal from '../lib/journal';
-import { RECORDED_SERMONS, RECORDED_STORIES, RecordedSermon } from '../lib/media';
+import { useCatalog } from '../lib/catalog';
+import { RecordedSermon } from '../lib/media';
 import {
   Badge,
   daysTogether,
@@ -26,7 +27,7 @@ import Medallion from './Medallion';
 import SermonTheater from './SermonTheater';
 import WallpapersScreen from './WallpapersScreen';
 import { MYSTERIES, Mystery } from '../lib/mysteries';
-import { WALLPAPERS, wallpaperThumbUrl } from '../lib/wallpapers';
+import { wallpaperThumbUrl } from '../lib/wallpapers';
 
 interface Props {
   visible: boolean;
@@ -82,6 +83,13 @@ export default function JourneyScreen({
   const [allBadgesOpen, setAllBadgesOpen] = useState(false);
   const [theater, setTheater] = useState<RecordedSermon | null>(null);
   const [wallpapersOpen, setWallpapersOpen] = useState(false);
+  // Shelves come from the remote catalog (bundled instantly, live when
+  // the fetch lands) — new weekly videos appear without an app update.
+  const {
+    sermons: RECORDED_SERMONS,
+    stories: RECORDED_STORIES,
+    wallpapers: WALLPAPERS,
+  } = useCatalog();
 
   useEffect(() => {
     if (visible) loadStats().then((s) => setStats({ ...s }));
