@@ -55,13 +55,21 @@ Call `generate` with `modelId: google/gemini-3.5-flash`, the video URL in
 
 - Trim a draggy or repeated passage (cut at a silence, 0.3s fade).
 - Tighten the ending if the video outlives its last beat.
+- VERSE ON SCREEN (approved Oct 22): while He speaks a Bible quote, show
+  the verse (or its key phrase, one line, in quotes) at the CTA position
+  (y=935) in Liberation Serif Italic ~34px white, border black@0.55 —
+  the CTA line fades out 0.3s before the verse appears and fades back
+  0.3s after it ends. Capital H rules apply. Time it to the spoken words.
+
+## Fix types Joseph has declined (do not apply)
+
+- Any on-screen text at 0:00 on top of the brand card — the card itself
+  is the promise.
 
 ## Fix types that need Joseph's yes before first use
 
-- Showing the Bible verse text on screen during the spoken quote
-  (a second, temporary text moment — swaps with the CTA line, same style).
-- Any on-screen text at 0:00 on top of the brand card.
 - Changing CTA wording after he has approved it.
+- Any other new text moment or format change.
 
 ## Calibration
 
