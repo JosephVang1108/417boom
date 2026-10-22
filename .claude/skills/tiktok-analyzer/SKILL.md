@@ -99,6 +99,10 @@ video — the Refinery Report. Log scores in the scratchpad usage log.
 
 - Any on-screen text at 0:00 on top of the brand card — the card itself
   is the promise.
+- ZOOMS of any kind (punch-ins, push-ins, micro-zooms, scale punches) —
+  Joseph, Oct 22: "no ZOOMS in the video, thats not for our app." The
+  steady, intimate single shot IS the brand. Analyzers will keep
+  suggesting zooms; always decline.
 
 ## Fix types that need Joseph's yes before first use
 
