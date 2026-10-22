@@ -10,7 +10,7 @@ Target quality bar: no section below 7/10, no unaddressed High-impact fix.
 
 ## Step 1 — Score it (Gemini media understanding, ~0.03–0.1 Magica credits)
 
-Call `generate` with `modelId: google/gemini-3.5-flash`, the video URL in
+Call `generate` with `modelId: google/gemini-3.8-flash`, the video URL in
 `video_urls`, and this prompt (verbatim, fill the bracket):
 
 > You are a TikTok growth analyst reviewing a faith short (calm talking-head
