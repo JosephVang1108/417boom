@@ -227,15 +227,15 @@ app.get('/tts', async (req, res) => {
         ? { stability: 1.0, use_speaker_boost: true }
         : {
             // Expressiveness is safe to give back now that Turbo pins
-            // the language: stories get real inflection, prayers a
-            // touch of warmth, conversation stays steady.
-            stability: story ? 0.5 : pray ? 0.7 : 0.75,
+            // the language: stories get real inflection, prayers sit
+            // between conversation and stories, conversation stays steady.
+            stability: story ? 0.5 : pray ? 0.6 : 0.75,
             similarity_boost: 0.9,
-            style: story ? 0.45 : pray ? 0.2 : 0.1,
+            style: story ? 0.45 : pray ? 0.3 : 0.1,
             use_speaker_boost: true,
-            // He never rushes. Prayers slowest of all, stories take
-            // their time, conversation stays gentle.
-            speed: pray ? 0.85 : story ? 0.88 : 0.92,
+            // He never rushes, but 0.85 stretched prayers into a
+            // monotone — 0.9 keeps them unhurried with the melody intact.
+            speed: pray ? 0.9 : story ? 0.88 : 0.92,
           };
     // Turbo supports pinning the language — do it so long Bible
     // passages can't wander either.
