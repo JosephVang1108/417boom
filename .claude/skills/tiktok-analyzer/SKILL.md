@@ -72,12 +72,15 @@ video — the Refinery Report. Log scores in the scratchpad usage log.
   text is fully visible on FRAME ONE (it is the default cover everywhere)
   and exits completely by 4.0s, before the dissolve — no text may ever
   ghost over His face.
-- ONE burned CTA line, chest level y=935 (just under His hair tips),
-  DejaVuSans-Bold ~33px white, border black@0.55, fades in 4.4s, single
-  line, benefit-to-a-stranger wording, capital H for He/Him/His
-  (Jesus/God), no apostrophes/em dashes/emoji in drawtext, no episode
-  numbers. The line must say what the video IS for the viewer (a
-  reassurance video must not be labeled a story).
+- Burned hook text (STYLE LOCKED by Joseph Oct 25, matching the white/
+  gold look he approved on screen): centered, lower third clear of His
+  face (first line y~940), DejaVuSans-Bold LARGE (~46px), up to TWO
+  stacked lines, white with the key words or second line in gold
+  (#e8c457), border black@0.55, fades in as the card exits, persists.
+  Benefit-to-a-stranger wording, capital H for He/Him/His (Jesus/God),
+  no apostrophes/em dashes/emoji in drawtext, no episode numbers. The
+  line must say what the video IS for the viewer (a reassurance video
+  must not be labeled a story).
 - One voice (ElevenLabs R9YQn8ytiYIfkeIr8wyN); match-cut stitching.
 - Caption = hook + target search query, plug only in pinned comment.
 - NEVER attach a platform sound/music track to a talking video at upload —
@@ -88,12 +91,12 @@ video — the Refinery Report. Log scores in the scratchpad usage log.
 
 - Trim a draggy or repeated passage (cut at a silence, 0.3s fade).
 - Tighten the ending if the video outlives its last beat.
-- VERSE ON SCREEN (approved Oct 22): while He speaks a Bible quote, show
-  the verse (or its key phrase, one line, in quotes) at the CTA position
-  (y=935) in Liberation Serif Italic ~34px white, border black@0.55 —
-  the CTA fades out by 0.3s BEFORE the verse fades in, and returns 0.3s
-  AFTER it ends (no frame may show both). Capital H rules apply. Time it
-  to the spoken words (Gemini gives the quote timestamps).
+- VERSE/KEY-SENTENCE SWAP (style updated Oct 25): while He speaks an
+  IMPORTANT verse or sentence, the hook text SWAPS out and the verse or
+  sentence shows in the SAME big white/gold style (verse words white,
+  reference or key phrase gold), timed to the spoken words (Gemini gives
+  timestamps); the hook returns after. CTA fades out 0.3s before the
+  swap, back 0.3s after — no frame shows both. Capital H rules apply.
 
 ## Fix types Joseph has declined (do not apply)
 
