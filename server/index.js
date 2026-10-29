@@ -206,12 +206,23 @@ app.post('/v1/messages', async (req, res) => {
 });
 
 // --- Text-to-speech, streamed ----------------------------------------
-// GET /tts?text=...&story=1&voice=<optional override>
+// GET /tts?text=...&story=1&voice=<optional override>&model=<optional override>
 app.get('/tts', async (req, res) => {
   const text = String(req.query.text || '').slice(0, 6000);
   if (!text.trim()) return res.status(400).json({ error: 'text required' });
   const story = req.query.story === '1';
   const pray = req.query.pray === '1';
+  // The render pipeline may pin the engine: the same voice sounds audibly
+  // different per model (turbo is brighter than v3/multilingual), and
+  // published videos must stay timbre-consistent with earlier takes.
+  const ALLOWED_MODELS = [
+    'eleven_v3',
+    'eleven_turbo_v2_5',
+    'eleven_multilingual_v2',
+  ];
+  const requestedModel = ALLOWED_MODELS.includes(String(req.query.model))
+    ? String(req.query.model)
+    : null;
 
   const request = (voiceId, model) => {
     const speakable =
@@ -277,7 +288,14 @@ app.get('/tts', async (req, res) => {
           CACHE_DIR,
           crypto
             .createHash('sha256')
-            .update(JSON.stringify(['read-v1', requestedVoice, text]))
+            .update(
+              JSON.stringify([
+                'read-v1',
+                requestedVoice,
+                text,
+                requestedModel || 'auto',
+              ])
+            )
             .digest('hex') + '.mp3'
         )
       : null;
@@ -294,7 +312,9 @@ app.get('/tts', async (req, res) => {
     // the only one that hard-pins the language to English — multilingual
     // v2 guesses the accent per request, which is where the British
     // prayers came from. Multilingual stays only as the last resort.
-    const models = ['eleven_turbo_v2_5', 'eleven_multilingual_v2'];
+    const models = requestedModel
+      ? [requestedModel]
+      : ['eleven_turbo_v2_5', 'eleven_multilingual_v2'];
     let upstream = null;
     let usedVoice = null;
     let usedModel = null;
