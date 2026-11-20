@@ -155,11 +155,10 @@ export async function synthesize(
       ...(options.story ? { story: '1' } : {}),
       ...(options.prayer ? { pray: '1' } : {}),
       ...(options.read ? { read: '1' } : {}),
-      ...(options.voice
-        ? { voice: options.voice }
-        : customVoiceId
-          ? { voice: customVoiceId }
-          : {}),
+      // Only app-chosen voices are forwarded in backend mode. A
+      // user-pasted custom voice ID must never reach the shared backend:
+      // it would be rendered with the app's own ElevenLabs account.
+      ...(options.voice ? { voice: options.voice } : {}),
     });
     return `${BACKEND_URL}/tts?${params.toString()}`;
   }

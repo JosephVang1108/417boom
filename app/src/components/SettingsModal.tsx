@@ -209,21 +209,29 @@ export default function SettingsModal({
               </>
             )}
 
-            <Text style={styles.section}>Custom voice (optional)</Text>
-            <Text style={styles.body}>
-              Paste the Voice ID of a voice from your ElevenLabs account —
-              for example one you created with Voice Design — and he will
-              speak with it.
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={voiceIdDraft}
-              onChangeText={setVoiceIdDraft}
-              placeholder="Voice ID…"
-              placeholderTextColor="#6E6E66"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            {/* Custom voice IDs are a developer-mode feature only: in
+                backend mode a pasted ID would be spoken with the app's own
+                ElevenLabs account, letting any user put any voice on His
+                face at the app's expense. */}
+            {!backendMode && (
+              <>
+                <Text style={styles.section}>Custom voice (optional)</Text>
+                <Text style={styles.body}>
+                  Paste the Voice ID of a voice from your ElevenLabs account —
+                  for example one you created with Voice Design — and he will
+                  speak with it.
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={voiceIdDraft}
+                  onChangeText={setVoiceIdDraft}
+                  placeholder="Voice ID…"
+                  placeholderTextColor="#6E6E66"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </>
+            )}
 
             <Text style={styles.section}>Daily notifications</Text>
             <View style={styles.toggleRow}>
